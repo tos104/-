@@ -50,7 +50,19 @@ def voice(text, speaker, speed):
         return np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float32) / 32768
 
 
+def source_audio(path, start, end):
+    """元動画の音声を切り出して整える(低域カット・ノイズ低減・コンプ・端のフェード)。"""
+    d = end - start
+    af = (f"highpass=f=90,afftdn=nf=-25,acompressor=threshold=-20dB:ratio=3:attack=5:release=80,"
+          f"afade=t=in:d=0.015,afade=t=out:st={max(0, d - 0.03):.3f}:d=0.03")
+    raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-ss", f"{start:.3f}", "-t", f"{d:.3f}", "-i", path,
+                          "-af", af, "-ac", "1", "-ar", str(SR), "-f", "s16le", "-"], check=True, capture_output=True).stdout
+    return np.frombuffer(raw, np.int16).astype(np.float32) / 32768
+
+
 def speaker_name(speaker):
+    if speaker == "source":
+        return "本人の声(元動画)"
     for s in json.load(urllib.request.urlopen(f"{VV}/speakers", timeout=30)):
         if any(st["id"] == speaker for st in s["styles"]):
             return s["name"]
@@ -84,7 +96,7 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
         for k, word in enumerate(hook):
             y = fg_mid - 130 + k * 130
             ev.append(f"Dialogue: 8,{ass_time(k * 0.4)},{ass_time(end0)},Hook,,0,0,0,,"
-                      f"{{\\an5\\pos(540,{y})\\frz-3{pop_in(150)}\\fad(0,150)}}{colorize(word, WHITE, YELLOW)}")
+                      f"{{\\an5\\pos(540,{y})\\frz3{pop_in(150)}\\fad(0,150)}}{colorize(word, WHITE, YELLOW)}")
         ev.append(f"Dialogue: 7,{ass_time(0)},{ass_time(end0)},Box,,0,0,0,,"
                   f"{{\\an7\\pos(0,0)\\1c{BLACK}\\1a&H60&\\fad(0,150)\\p1}}{rect(0, FG_TOP, 1080, fg_bottom - 250)}{{\\p0}}")
     band_top = fg_bottom - 250
@@ -107,8 +119,8 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
             ev.append(f"Dialogue: 3,{ass_time(s)},{ass_time(total)},Box,,0,0,0,,"
                       f"{{\\an7\\pos(8,{y - 78})\\1c{YELLOW}\\3c{BLACK}\\bord4\\fscx60\\fscy60{pop_in(140)}\\p1}}{CROWN}{{\\p0}}")
     for i, (s, e, ln) in enumerate(cuts):
-        # カット頭の白フラッシュ
-        if i:
+        # カット頭の白フラッシュ(同じ行の中のジャンプカットには入れない)
+        if i and not ln.get("sub"):
             ev.append(f"Dialogue: 5,{ass_time(s)},{ass_time(s + 0.12)},Box,,0,0,0,,"
                       f"{{\\an7\\pos(0,0)\\1c{WHITE}\\1a&H30&\\fad(0,110)\\p1}}m 0 0 l 1080 0 1080 1920 0 1920{{\\p0}}")
         # 字幕(ポップイン)
@@ -117,7 +129,7 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
         # 順位バッジ(画面中央に叩きつけ→フェード)
         if ln.get("badge"):
             ev.append(f"Dialogue: 6,{ass_time(s + 0.02)},{ass_time(min(e, s + 1.3))},Badge,,0,0,0,,"
-                      f"{{\\an5\\pos(540,{FG_TOP + 260})\\frz-6\\fad(0,180)"
+                      f"{{\\an5\\pos(540,{FG_TOP + 260})\\frz6\\fad(0,180)"
                       f"\\fscx260\\fscy260\\t(0,140,\\fscx92\\fscy92)\\t(140,220,\\fscx100\\fscy100)}}{ln['badge']}")
         # 光のスイープ(カードの上を斜めの光が横切る)
         if ln.get("shine"):
@@ -175,6 +187,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 def zoom_expr(kind):
     if kind == "punch":   # 強く寄ってから戻る
         return "if(lt(on,7),1.28-0.035*on,1.035+0.0007*on)"
+    if kind == "jump":    # ジャンプカット: 少し寄った画角で切り替わりを見せる
+        return "1.1+0.0012*on"
     if kind == "push":    # ゆっくり寄る
         return "1+0.0022*on"
     return "1"
@@ -198,6 +212,17 @@ def main():
     # 1) 音声と尺
     voices, cuts, t = [], [], 0.0
     for ln in sc["lines"]:
+        if spk == "source":
+            # ranges の各区間をつなぐ。2区間目以降はジャンプカット(演出は先頭区間だけ)
+            caps = ln.get("caps", [ln.get("cap", "")])
+            for k, (r0, r1) in enumerate(ln["ranges"]):
+                st, en = to_sec(r0), to_sec(r1)
+                sub = dict(ln) if k == 0 else {"sub": True, "zoom": "jump"}
+                sub.update(src=r0, cap=caps[min(k, len(caps) - 1)], say=sub.get("say", caps[min(k, len(caps) - 1)]))
+                voices.append((t, source_audio(a.source, st, en)))
+                cuts.append((t, t + en - st, sub))
+                t += en - st
+            continue
         v = voice(ln["say"], spk, a.speed)
         dur = len(v) / SR + GAP
         voices.append((t, v))
@@ -214,7 +239,7 @@ def main():
         put(at, v, 1.0)
     put(0.0, se.get("logo"), 0.5)  # 毎回同じサウンドロゴ
     for i, (s, e, ln) in enumerate(cuts):
-        if i:
+        if i and not ln.get("sub"):
             put(s - 0.12, se.get("whoosh"), 0.45)
         put(s + 0.03, se.get("pop"), 0.35)
         if ln.get("badge"):
@@ -264,7 +289,7 @@ def main():
 
         if a.storyboard:
             storyboard(a.out, a.storyboard, cuts, total, os.path.basename(a.script), speaker_name(spk), sc.get("hook"))
-    chars = sum(len(reading(ln["say"])) for ln in sc["lines"])
+    chars = sum(len(reading(ln.get("say", ""))) for _, _, ln in cuts)
     print(f"{a.out} ({total:.1f}s, {chars / total:.1f}字/秒, voice={speaker_name(spk)})")
 
 
@@ -276,7 +301,7 @@ def storyboard(video, out, cuts, total, title, vname, hook=None):
     rows = (len(cuts) + COLS - 1) // COLS
     sheet = Image.new("RGB", (COLS * (PW + 20) + 20, 70 + rows * (PH + TH + 20)), "white")
     d = ImageDraw.Draw(sheet)
-    d.text((20, 18), f"{title}  全{total:.1f}秒 / {len(cuts)}カット / 声: VOICEVOX:{vname}", font=big, fill="black")
+    d.text((20, 18), f"{title}  全{total:.1f}秒 / {len(cuts)}カット / 声: {vname if '本人' in vname else 'VOICEVOX:' + vname}", font=big, fill="black")
     with tempfile.TemporaryDirectory() as td:
         for i, (s, e, ln) in enumerate(cuts):
             png = os.path.join(td, f"{i}.png")
@@ -300,7 +325,7 @@ def storyboard(video, out, cuts, total, title, vname, hook=None):
             fx += [n for k, n in [("freeze", "映像を一瞬止める"), ("shine", "光のスイープ"), ("tint", "金色に転調"), ("chart", "図解(棒グラフ)")] if ln.get(k)]
             if i == 0:
                 fx += ["サウンドロゴ"] + (["冒頭フック3段"] if hook else [])
-            body = ["【声】" + ln["say"].replace("{", "").replace("}", ""), "【演出】" + "・".join(fx)]
+            body = ["【声】" + re.sub(r"[{}|]", "", ln["say"]), "【演出】" + "・".join(fx)]
             if ln.get("note"):
                 body.append("【狙い】" + ln["note"])
             for para in body:

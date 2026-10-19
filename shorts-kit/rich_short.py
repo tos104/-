@@ -241,6 +241,39 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """ + "\n".join(ev) + "\n")
 
 
+SIMPLE_CROP = "330:184:109:62"  # 548x360 の元動画から、上のテロップ/ロゴと下のテロップを除いた中央部分(4:2:0 のため偶数)
+_cw, _ch = map(int, SIMPLE_CROP.split(":")[:2])
+SIMPLE_H = int(1080 * _ch / _cw) // 2 * 2  # 1080 幅にしたときの高さ(切り取り範囲から計算)
+SIMPLE_TOP = 470
+
+
+def build_ass_simple(path, header, cuts, total):
+    """見出し(固定)と字幕(切り替えのみ)だけ。動きは字幕の 0.08 秒のフェードだけ。"""
+    ev = [f"Dialogue: 1,{ass_time(0)},{ass_time(total)},Head,,0,0,0,,{{\\an5\\pos(540,290)}}{colorize(header, WHITE, YELLOW)}"]
+    cap_y = SIMPLE_TOP + SIMPLE_H + 150
+    for i, (s, e, ln) in enumerate(cuts):
+        cap = colorize(ln.get("cap", ""), WHITE, YELLOW)
+        if ln.get("badge"):
+            cap = f"{{\\c{YELLOW}}}{ln['badge']}{{\\c{WHITE}}}\\N" + cap
+        fade = "" if (i == 0 or ln.get("cont")) else "\\fad(80,0)"
+        ev.append(f"Dialogue: 2,{ass_time(s)},{ass_time(e)},Cap,,0,0,0,,{{\\an5\\pos(540,{cap_y}){fade}}}{cap}")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(f"""[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 2
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Head,{HEAD_FONT},96,{WHITE},{WHITE},{BLACK},&H00000000&,0,0,0,0,100,100,2,0,1,6,0,5,40,40,0,1
+Style: Cap,{CAP_FONT},84,{WHITE},{WHITE},{BLACK},&H00000000&,0,0,0,0,100,100,0,0,1,6,0,5,50,50,0,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+""" + "\n".join(ev) + "\n")
+
+
 def zoom_expr(kind):
     if kind == "punch":   # 強く寄ってから戻る
         return "if(lt(on,7),1.28-0.035*on,1.035+0.0007*on)"
@@ -259,6 +292,7 @@ def main():
     ap.add_argument("--storyboard")
     ap.add_argument("--bgm")
     ap.add_argument("--speed", type=float, default=1.2)
+    ap.add_argument("--simple", action="store_true", help="演出なし: 黒背景・見出し・映像・字幕だけ。効果音なし")
     a = ap.parse_args()
     sc = json.load(open(a.script, encoding="utf-8"))
     spk = sc.get("voice", 21)
@@ -309,8 +343,9 @@ def main():
         mix[i:i + len(x)] += x * gain
     for at, v in voices:
         put(at, v, 1.0)
-    put(max(0.0, total - 1.0), se.get("logo"), 0.55)  # 毎回同じサウンドロゴ(最後。ループの継ぎ目)
-    for i, (s, e, ln) in enumerate(cuts):
+    if not a.simple:
+        put(max(0.0, total - 1.0), se.get("logo"), 0.55)  # 毎回同じサウンドロゴ(最後。ループの継ぎ目)
+    for i, (s, e, ln) in enumerate([] if a.simple else cuts):
         if i and not ln.get("sub"):
             put(s - 0.12, se.get("whoosh"), 0.45)
         if not ln.get("cont"):
@@ -338,6 +373,15 @@ def main():
         parts = []
         for i, (s, e, ln) in enumerate(cuts):
             p = os.path.join(td, f"p{i:02d}.mp4")
+            if a.simple:
+                # 元動画の上下のテロップとロゴを切り落とし、カードの部分だけを大きく。動きは付けない
+                z = 1.15 if i % 2 else 1.0  # ジャンプカットの継ぎ目が目立たないよう画角だけ交互に
+                vf = (f"fps=30,crop={SIMPLE_CROP},scale={int(1080 * z) // 2 * 2}:-2:flags=lanczos,"
+                      f"crop=1080:{SIMPLE_H},unsharp=5:5:0.4,format=yuv420p")
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", str(to_sec(ln["src"])), "-t", f"{e - s:.3f}",
+                                "-i", a.source, "-an", "-vf", vf, "-c:v", "libx264", "-crf", "16", p], check=True)
+                parts.append(p)
+                continue
             freeze = f"tpad=start_mode=clone:start_duration={FREEZE}," if ln.get("freeze") else ""
             vf = (f"fps=30,{freeze}scale=2160:-2:flags=lanczos,"
                   f"zoompan=z='{zoom_expr(ln.get('zoom', 'push'))}':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
@@ -350,10 +394,14 @@ def main():
 
         # 4) 合成
         ass = os.path.join(td, "fx.ass")
-        build_ass(ass, sc.get("header", ""), cuts, total, fg_bottom, sc.get("hook"))
+        if a.simple:
+            build_ass_simple(ass, sc.get("header", ""), cuts, total)
+            vf = (f"color=c=black:s=1080x1920:r=30[bg];[bg][0:v]overlay=0:{SIMPLE_TOP}:shortest=1,"
+                  f"ass='{ass}':fontsdir='{FONTS}',format=yuv420p[v]")
         hits = [s_ for s_, _, ln in cuts if ln.get("badge")]
         shake = "+".join(f"if(between(t,{h:.2f},{h + 0.28:.2f}),14*sin(t*95)*(1-(t-{h:.2f})/0.28),0)" for h in hits) or "0"
-        vf = (f"[0:v]split[a][b];"
+        if not a.simple:
+          vf = (f"[0:v]split[a][b];"
               f"[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2,eq=brightness=-0.3:saturation=1.2[bg];"
               f"[b]split[f1][f2];[f2]crop=1080:{BAND}:0:{fg_h - BAND},boxblur=22:3,eq=brightness=-0.28:saturation=0.35[glass];"
               f"[f1][glass]overlay=0:{fg_h - BAND}[fgx];"

@@ -16,6 +16,11 @@ CHANNELS = {
 }
 OWN = "tt"
 OWN_DETAIL = 15  # 委託元の最新N本は高評価数と投稿日も取る
+# ユーザー(編集担当)が制作したショート。2026-10-19 時点の委託元の最新10本
+USER_MADE = {
+    "ZBADKqDTgu8", "txtCZ6iEGZo", "7e7noqadTZg", "rIPhizoau0s", "6dyGxiIV2VU",
+    "4GwmFP4k_1I", "cTuUUFNXvxw", "XZ4g7t7YDWE", "T9rCs5nbruk", "WURV6jE4dbs",
+}
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "snapshots.jsonl")
 
 
@@ -76,7 +81,8 @@ def report(hours):
             extra = ""
             if "likes" in x and x["likes"] is not None and x["views"]:
                 extra = f"  高評価率 {x['likes'] / x['views'] * 100:.1f}%  {x.get('date', '')}"
-            print(f"  {d:+8,}  計{x['views']:>8,}  {x['title'][:40]}{extra}")
+            mark = "[自作]" if x["id"] in USER_MADE else "      "
+            print(f"  {d:+8,}  計{x['views']:>8,}  {mark} {x['title'][:40]}{extra}")
 
 
 if __name__ == "__main__":

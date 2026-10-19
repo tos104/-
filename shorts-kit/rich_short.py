@@ -163,6 +163,7 @@ def main():
         mix[i:i + len(x)] += x * gain
     for at, v in voices:
         put(at, v, 1.0)
+    put(0.0, se.get("logo"), 0.5)  # 毎回同じサウンドロゴ
     for i, (s, e, ln) in enumerate(cuts):
         if i:
             put(s - 0.12, se.get("whoosh"), 0.45)

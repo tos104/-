@@ -81,7 +81,19 @@ def ding(dur=1.0):
     return _norm(x * np.exp(-t * 4.5), 0.45)
 
 
-SOUNDS = {"whoosh": whoosh, "pop": pop, "impact": impact, "kira": kira, "drumroll": drumroll, "ding": ding}
+def logo(dur=0.95):
+    """サウンドロゴ: 毎回同じ3音(ミ→ソ→ド)。単純接触で『このチャンネルの音』として覚えてもらう。"""
+    t = _t(dur)
+    out = np.zeros_like(t)
+    for k, f in enumerate([1318.5, 1568.0, 2093.0]):
+        d = int(k * 0.11 * SR)
+        tt = t[: len(t) - d]
+        tone = np.sin(2 * np.pi * f * tt) + 0.35 * np.sin(2 * np.pi * 2 * f * tt) + 0.12 * np.sin(2 * np.pi * 3 * f * tt)
+        out[d:] += tone * np.exp(-tt * (5 if k == 2 else 9))
+    return _norm(out, 0.5)
+
+
+SOUNDS = {"logo": logo, "whoosh": whoosh, "pop": pop, "impact": impact, "kira": kira, "drumroll": drumroll, "ding": ding}
 
 
 def get(name):

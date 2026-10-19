@@ -135,7 +135,7 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
             vmax = max(r[1] for r in rows)
             top = FG_TOP + 70
             ev.append(f"Dialogue: 7,{ass_time(s)},{ass_time(e)},Box,,0,0,0,,"
-                      f"{{\\an7\\pos(0,0)\\1c{BLACK}\\1a&H40&\\fad(120,0)\\p1}}{rect(0, FG_TOP, 1080, fg_bottom - 250)}{{\\p0}}")
+                      f"{{\\an7\\pos(0,0)\\1c{BLACK}\\1a&H06&\\fad(120,0)\\p1}}{rect(0, FG_TOP, 1080, fg_bottom - 250)}{{\\p0}}")
             for k, (label, value, shown) in enumerate(rows):
                 y = top + k * 150
                 w = int(900 * value / vmax)

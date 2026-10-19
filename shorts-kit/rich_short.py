@@ -97,7 +97,8 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
         for k, word in enumerate(hook):
             y = fg_mid - 130 + k * 130
             ev.append(f"Dialogue: 8,{ass_time(k * 0.4)},{ass_time(end0)},Hook,,0,0,0,,"
-                      f"{{\\an5\\pos(540,{y})\\frz3{pop_in(150)}\\fad(0,150)}}{colorize(word, WHITE, YELLOW)}")
+                      f"{{\\an5\\clip(0,{y - 75},1080,{y + 75})\\move(540,{y + 150},540,{y},0,260)\\frz3\\fad(0,150)}}"
+                      f"{colorize(word, WHITE, YELLOW)}")
         ev.append(f"Dialogue: 7,{ass_time(0)},{ass_time(end0)},Box,,0,0,0,,"
                   f"{{\\an7\\pos(0,0)\\1c{BLACK}\\1a&H60&\\fad(0,150)\\p1}}{rect(0, FG_TOP, 1080, fg_bottom - 250)}{{\\p0}}")
     band_top = fg_bottom - BAND
@@ -132,6 +133,13 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
             ev.append(f"Dialogue: 6,{ass_time(s + 0.02)},{ass_time(min(e, s + 1.3))},Badge,,0,0,0,,"
                       f"{{\\an5\\pos(540,{FG_TOP + 260})\\frz6\\fad(0,180)"
                       f"\\fscx260\\fscy260\\t(0,140,\\fscx92\\fscy92)\\t(140,220,\\fscx100\\fscy100)}}{ln['badge']}")
+        if ln.get("badge"):
+            cx, cy = 540, FG_TOP + 260
+            for k in range(10):
+                ang = k * 36
+                ev.append(f"Dialogue: 5,{ass_time(s + 0.05)},{ass_time(s + 0.45)},Box,,0,0,0,,"
+                          f"{{\\an7\\pos({cx},{cy})\\org({cx},{cy})\\frz{ang}\\1c{YELLOW}\\bord0\\fad(0,200)"
+                          f"\\fscx60\\fscy100\\t(0,300,\\fscx160\\fscy60)\\p1}}{rect(170, -6, 330, 6)}{{\\p0}}")
         # 光のスイープ(カードの上を斜めの光が横切る)
         if ln.get("shine"):
             a0 = s + 0.25
@@ -157,8 +165,13 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
                 ev.append(f"Dialogue: 8,{ass_time(s + 0.15)},{ass_time(e)},Box,,0,0,0,,"
                           f"{{\\an7\\pos(0,0)\\1c{color}\\clip(90,{y + 70},90,{y + 125})\\t(0,500,\\clip(90,{y + 70},{90 + w},{y + 125}))\\p1}}"
                           f"{rect(90, y + 70, 90 + w, y + 125)}{{\\p0}}")
-                ev.append(f"Dialogue: 9,{ass_time(s + 0.6)},{ass_time(e)},Board,,0,0,0,,"
-                          f"{{\\an6\\pos({min(1020, 90 + w - 10)},{y + 98})\\1c{BLACK}\\bord0\\shad0{pop_in(120)}}}{shown}")
+                steps = 12
+                for j in range(steps + 1):
+                    t0 = s + 0.15 + 0.5 * j / steps
+                    t1 = e if j == steps else s + 0.15 + 0.5 * (j + 1) / steps
+                    txt_ = shown if j == steps else f"{round(value * j / steps)}万円"
+                    ev.append(f"Dialogue: 9,{ass_time(t0)},{ass_time(t1)},Board,,0,0,0,,"
+                              f"{{\\an6\\pos({min(1020, 90 + w - 10)},{y + 98})\\1c{WHITE}\\3c{BLACK}\\bord7}}{txt_}")
     # 進捗バー
     ms = int(total * 1000)
     ev.append(f"Dialogue: 7,{ass_time(0)},{ass_time(total)},Box,,0,0,0,,"
@@ -279,11 +292,13 @@ def main():
         # 4) 合成
         ass = os.path.join(td, "fx.ass")
         build_ass(ass, sc.get("header", ""), cuts, total, fg_bottom, sc.get("hook"))
+        hits = [s_ for s_, _, ln in cuts if ln.get("badge")]
+        shake = "+".join(f"if(between(t,{h:.2f},{h + 0.28:.2f}),14*sin(t*95)*(1-(t-{h:.2f})/0.28),0)" for h in hits) or "0"
         vf = (f"[0:v]split[a][b];"
               f"[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2,eq=brightness=-0.3:saturation=1.2[bg];"
               f"[b]split[f1][f2];[f2]crop=1080:{BAND}:0:{fg_h - BAND},boxblur=22:3,eq=brightness=-0.28:saturation=0.35[glass];"
               f"[f1][glass]overlay=0:{fg_h - BAND}[fgx];"
-              f"[bg][fgx]overlay=0:{FG_TOP},noise=alls=6:allf=t,vignette=PI/5,"
+              f"[bg][fgx]overlay=x='{shake}':y='{FG_TOP}+({shake})*0.6',noise=alls=6:allf=t,vignette=PI/5,"
               f"ass='{ass}':fontsdir='{FONTS}',format=yuv420p[v]")
         os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-i", wav,
@@ -318,16 +333,16 @@ def storyboard(video, out, cuts, total, title, vname, hook=None):
             d.text((x, ty), f"#{i + 1}  {s:.1f}–{e:.1f}秒", font=big, fill="#c00000")
             d.text((x, ty + 32), f"素材 {ln['src']}〜 / ズーム {ln.get('zoom', 'push')}", font=font, fill="#555555")
             ty += 60
-            fx = ["白フラッシュ+シュッ"] if i else ["見出しポップ"]
-            fx += ["字幕ポップ+ポン"]
+            fx = (["白フラッシュ+シュッ"] if not ln.get("sub") else ["#041ジャンプカット"]) if i else ["#001ポップイン(見出し)"]
+            fx += ["#001ポップイン(字幕)+ポン"]
             if ln.get("badge"):
-                fx.append(f"「{ln['badge']}」叩きつけ+ドン")
+                fx.append(f"「{ln['badge']}」#036傾き+#010オーバーシュート+#003バースト+#024インパクトシェイク+ドン")
             if ln.get("pre_se"):
                 fx.append(f"直前に{ln['pre_se']}")
             fx += ln.get("se", [])
-            fx += [n for k, n in [("freeze", "映像を一瞬止める"), ("shine", "光のスイープ"), ("tint", "金色に転調"), ("chart", "図解(棒グラフ)")] if ln.get(k)]
+            fx += [n for k, n in [("freeze", "#040フリーズフレーム"), ("shine", "#022ライトスイープ"), ("tint", "金色に転調"), ("chart", "図解(棒グラフ)+#007カウントアップ")] if ln.get(k)]
             if i == 0:
-                fx += ["サウンドロゴ"] + (["冒頭フック3段"] if hook else [])
+                fx += ["サウンドロゴ"] + (["冒頭フック3段(#005マスクリビール+#002スタガー)"] if hook else [])
             body = ["【声】" + re.sub(r"[{}|]", "", ln["say"]), "【演出】" + "・".join(fx)]
             if ln.get("note"):
                 body.append("【狙い】" + ln["note"])

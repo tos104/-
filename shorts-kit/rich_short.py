@@ -76,7 +76,7 @@ def build_ass(path, header, cuts, total, fg_bottom):
               f"{{\\an8\\pos(540,46){pop_in(200)}}}{colorize(header, WHITE, YELLOW)}")
     # 字幕の下敷き帯(元動画のテロップを隠す)
     ev.append(f"Dialogue: 2,{ass_time(0)},{ass_time(total)},Box,,0,0,0,,"
-              f"{{\\an7\\pos(0,0)\\1c{BLACK}\\1a&H0C&\\p1}}m 0 {band_top} l 1080 {band_top} 1080 {fg_bottom} 0 {fg_bottom}{{\\p0}}")
+              f"{{\\an7\\pos(0,0)\\1c{BLACK}\\1a&H00&\\p1}}m 0 {band_top} l 1080 {band_top} 1080 {fg_bottom} 0 {fg_bottom}{{\\p0}}")
     # ランキング表: 冒頭から「？？？」で並べ、順位の発表時に埋める
     board = sorted([(int(re.sub(r"\D", "", ln["badge"])), s, ln) for s, e, ln in cuts if ln.get("badge")])
     for row, (rank, s, ln) in enumerate(board):

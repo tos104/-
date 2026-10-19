@@ -78,7 +78,13 @@ def colorize(text, base, accent):
 
 
 def pop_in(ms_in=160):
+    """見出し・バッジ用: 強く入って行き過ぎてから止まる。"""
     return f"\\fscx45\\fscy45\\t(0,{ms_in},\\fscx112\\fscy112)\\t({ms_in},{ms_in + 90},\\fscx100\\fscy100)"
+
+
+def snap_in(ms_in=110):
+    """字幕・表など小さな要素用: 素早く入り、行き過ぎはほぼなし。"""
+    return f"\\fscx85\\fscy85\\alpha&HFF&\\t(0,{ms_in},\\fscx100\\fscy100\\alpha&H00&)"
 
 
 CROWN = "m 0 50 l 0 12 22 32 40 0 58 32 80 12 80 50"
@@ -117,7 +123,7 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
         label = f"第{rank}位"
         ev.append(f"Dialogue: 3,{ass_time(0)},{ass_time(s)},Board,,0,0,0,,{{\\an4\\pos(70,{y})\\1c&H00A0A0A0&}}{label}  ？？？")
         ev.append(f"Dialogue: 3,{ass_time(s)},{ass_time(total)},Board,,0,0,0,,"
-                  f"{{\\an4\\pos(70,{y}){pop_in(140)}}}{{\\c{YELLOW}}}{label}{{\\c{WHITE}}}  {ln.get('board', ln['badge'])}")
+                  f"{{\\an4\\pos(70,{y}){snap_in()}}}{{\\c{YELLOW}}}{label}{{\\c{WHITE}}}  {ln.get('board', ln['badge'])}")
         if rank == 1:  # 1位には王冠アイコン
             ev.append(f"Dialogue: 3,{ass_time(s)},{ass_time(total)},Box,,0,0,0,,"
                       f"{{\\an7\\pos(8,{y - 78})\\1c{YELLOW}\\3c{BLACK}\\bord4\\fscx60\\fscy60{pop_in(140)}\\p1}}{CROWN}{{\\p0}}")
@@ -128,7 +134,7 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
                       f"{{\\an7\\pos(0,0)\\1c{WHITE}\\1a&H30&\\fad(0,110)\\p1}}m 0 0 l 1080 0 1080 1920 0 1920{{\\p0}}")
         # 字幕(ポップイン)
         cap = colorize(ln.get("cap", ln["say"]), WHITE, YELLOW if not ln.get("badge") else RED)
-        anim = "" if ln.get("cont") else pop_in()
+        anim = "" if ln.get("cont") else snap_in()
         ev.append(f"Dialogue: 4,{ass_time(s + (0 if ln.get('cont') else 0.03))},{ass_time(e)},Cap,,0,0,0,,{{\\an5\\pos(540,{cap_y}){anim}}}{cap}")
         # 順位バッジ(画面中央に叩きつけ→フェード)
         if ln.get("badge"):
@@ -231,8 +237,10 @@ def main():
         if spk == "source":
             # ranges の各区間をつなぐ。2区間目以降はジャンプカット(演出は先頭区間だけ)
             caps = ln.get("caps", [ln.get("cap", "")])
-            for k, (r0, r1) in enumerate(ln["ranges"]):
+            for k, rg in enumerate(ln["ranges"]):
+                r0, r1 = rg[0], rg[1]
                 st, en = to_sec(r0), to_sec(r1)
+                vshift = to_sec(rg[2]) - st if len(rg) > 2 else 0.0  # 映像の取り出し位置のずれ
                 cap = caps[min(k, len(caps) - 1)]
                 voices.append((t, source_audio(a.source, st, en)))
                 # 長い区間は MAX_SHOT 秒ごとに画角を変えて切る(同じ字幕のまま続ける)
@@ -243,7 +251,7 @@ def main():
                         sub = dict(ln)
                     else:
                         sub = {"sub": True, "zoom": "jump" if (k + j) % 2 else "push", "cont": j > 0}
-                    sub.update(src=f"{c0:.2f}", cap=cap, say=sub.get("say", cap) if j == 0 else "")
+                    sub.update(src=f"{c0 + vshift:.2f}", cap=cap, say=sub.get("say", cap) if j == 0 else "")
                     cuts.append((t, t + c1 - c0, sub))
                     t += c1 - c0
             continue
@@ -309,7 +317,7 @@ def main():
               f"[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2,eq=brightness=-0.3:saturation=1.2[bg];"
               f"[b]split[f1][f2];[f2]crop=1080:{BAND}:0:{fg_h - BAND},boxblur=22:3,eq=brightness=-0.28:saturation=0.35[glass];"
               f"[f1][glass]overlay=0:{fg_h - BAND}[fgx];"
-              f"[bg][fgx]overlay=x='{shake}':y='{FG_TOP}+({shake})*0.6',noise=alls=6:allf=t,vignette=PI/5,"
+              f"[bg][fgx]overlay=x='{shake}':y='{FG_TOP}+({shake})*0.6',noise=alls=6:allf=t:all_seed=7,vignette=PI/5,"
               f"ass='{ass}':fontsdir='{FONTS}',format=yuv420p[v]")
         os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-i", wav,

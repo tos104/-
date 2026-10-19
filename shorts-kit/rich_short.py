@@ -24,6 +24,8 @@ SR = 48000
 GAP = 0.10
 BAND = 250  # 字幕帯(すりガラス)の高さ
 MAX_SHOT = 3.0  # 本人の声モードで、同じ画角を続ける最長(秒)
+JET_MIN = 0.28  # これ以上の間はジェットカットで詰める(秒)
+JET_PAD = 0.06  # 声の前後に残す余白(秒)
 FREEZE = 0.35  # 順位発表の頭で映像を止める秒数
 FG_TOP = 300
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -62,6 +64,32 @@ def source_audio(path, start, end):
     return np.frombuffer(raw, np.int16).astype(np.float32) / 32768
 
 
+def speech_spans(path, start, end):
+    """区間内の「間」(JET_MIN 秒以上の無音)を除いた、声のある小区間を返す。"""
+    raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-ss", f"{start:.3f}", "-t", f"{end - start:.3f}", "-i", path,
+                          "-ac", "1", "-ar", "16000", "-f", "s16le", "-"], check=True, capture_output=True).stdout
+    x = np.frombuffer(raw, np.int16).astype(np.float32)
+    win = 320  # 20ms
+    n = len(x) // win
+    if n == 0:
+        return [(start, end)]
+    db = 20 * np.log10(np.sqrt((x[: n * win].reshape(n, win) ** 2).mean(1)) + 1)
+    thr = np.percentile(db, 10) + 5  # 小さな声も残す(間だけを詰める)
+    voiced = db > thr
+    spans, i = [], 0
+    while i < n:
+        if voiced[i]:
+            j = i
+            while j < n and (voiced[j] or (j + int(JET_MIN / 0.02) < n and voiced[j:j + int(JET_MIN / 0.02)].any())):
+                j += 1
+            spans.append((max(0, i * 0.02 - JET_PAD), min(end - start, j * 0.02 + JET_PAD)))
+            i = j
+        else:
+            i += 1
+    spans = [(a, b) for a, b in spans if b - a >= 0.15] or [(0, end - start)]
+    return [(start + a, start + b) for a, b in spans]
+
+
 def speaker_name(speaker):
     if speaker == "source":
         return "本人の声(元動画)"
@@ -87,6 +115,8 @@ def snap_in(ms_in=110):
     return f"\\fscx85\\fscy85\\alpha&HFF&\\t(0,{ms_in},\\fscx100\\fscy100\\alpha&H00&)"
 
 
+# 0フレーム目から見えたまま、わずかに縮んで落ち着く(スワイプ前の一瞬で読める)
+SETTLE = "\\fscx112\\fscy112\\t(0,140,\\fscx100\\fscy100)"
 CROWN = "m 0 50 l 0 12 22 32 40 0 58 32 80 12 80 50"
 
 
@@ -103,16 +133,20 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
         end0 = min(cuts[0][1], 2.4)
         for k, word in enumerate(hook):
             y = fg_mid - 130 + k * 130
-            ev.append(f"Dialogue: 8,{ass_time(k * 0.4)},{ass_time(end0)},Hook,,0,0,0,,"
-                      f"{{\\an5\\clip(0,{y - 75},1080,{y + 75})\\move(540,{y + 150},540,{y},0,260)\\frz3\\fad(0,150)}}"
-                      f"{colorize(word, WHITE, YELLOW)}")
+            if k == 0:  # 0フレーム目から見えている(スワイプ前の一瞬で何の動画かわかる)
+                anim = "\\fscx118\\fscy118\\t(0,120,\\fscx100\\fscy100)"
+            else:       # #005 マスクリビール、0.25秒ずつ(#002 スタガー)
+                anim = f"\\clip(0,{y - 75},1080,{y + 75})\\move(540,{y + 150},540,{y},0,180)"
+            pos = "" if "move" in anim else f"\\pos(540,{y})"
+            ev.append(f"Dialogue: 8,{ass_time(k * 0.25)},{ass_time(end0)},Hook,,0,0,0,,"
+                      f"{{\\an5{pos}{anim}\\frz3\\fad(0,150)}}{colorize(word, WHITE, YELLOW)}")
         ev.append(f"Dialogue: 7,{ass_time(0)},{ass_time(end0)},Box,,0,0,0,,"
                   f"{{\\an7\\pos(0,0)\\1c{BLACK}\\1a&H60&\\fad(0,150)\\p1}}{rect(0, FG_TOP, 1080, fg_bottom - 250)}{{\\p0}}")
     band_top = fg_bottom - BAND
     cap_y = band_top + 125
     # 見出し(太い黒フチ1層。二重フチは極太書体だと字が潰れる)
     ev.append(f"Dialogue: 1,{ass_time(0)},{ass_time(total)},Head,,0,0,0,,"
-              f"{{\\an8\\pos(540,46){pop_in(200)}}}{colorize(header, WHITE, YELLOW)}")
+              f"{{\\an8\\pos(540,46){SETTLE}}}{colorize(header, WHITE, YELLOW)}")
     # 字幕の帯はすりガラス(映像側でぼかし済み)。上端に細い区切り線だけ引く
     ev.append(f"Dialogue: 2,{ass_time(0)},{ass_time(total)},Box,,0,0,0,,"
               f"{{\\an7\\pos(0,0)\\1c{YELLOW}\\1a&H60&\\p1}}{rect(0, band_top, 1080, band_top + 4)}{{\\p0}}")
@@ -134,8 +168,9 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
                       f"{{\\an7\\pos(0,0)\\1c{WHITE}\\1a&H30&\\fad(0,110)\\p1}}m 0 0 l 1080 0 1080 1920 0 1920{{\\p0}}")
         # 字幕(ポップイン)
         cap = colorize(ln.get("cap", ln["say"]), WHITE, YELLOW if not ln.get("badge") else RED)
-        anim = "" if ln.get("cont") else snap_in()
-        ev.append(f"Dialogue: 4,{ass_time(s + (0 if ln.get('cont') else 0.03))},{ass_time(e)},Cap,,0,0,0,,{{\\an5\\pos(540,{cap_y}){anim}}}{cap}")
+        anim = SETTLE if i == 0 else ("" if ln.get("cont") else snap_in())
+        c0 = 0 if i == 0 else (s if ln.get("cont") else s + 0.03)  # 先頭の字幕だけ0フレーム目から
+        ev.append(f"Dialogue: 4,{ass_time(c0)},{ass_time(e)},Cap,,0,0,0,,{{\\an5\\pos(540,{cap_y}){anim}}}{cap}")
         # 順位バッジ(画面中央に叩きつけ→フェード)
         if ln.get("badge"):
             ev.append(f"Dialogue: 6,{ass_time(s + 0.02)},{ass_time(min(e, s + 1.3))},Badge,,0,0,0,,"
@@ -242,18 +277,23 @@ def main():
                 st, en = to_sec(r0), to_sec(r1)
                 vshift = to_sec(rg[2]) - st if len(rg) > 2 else 0.0  # 映像の取り出し位置のずれ
                 cap = caps[min(k, len(caps) - 1)]
-                voices.append((t, source_audio(a.source, st, en)))
-                # 長い区間は MAX_SHOT 秒ごとに画角を変えて切る(同じ字幕のまま続ける)
-                n = max(1, int(np.ceil((en - st) / MAX_SHOT)))
-                for j in range(n):
-                    c0, c1 = st + (en - st) * j / n, st + (en - st) * (j + 1) / n
-                    if k == 0 and j == 0:
-                        sub = dict(ln)
-                    else:
-                        sub = {"sub": True, "zoom": "jump" if (k + j) % 2 else "push", "cont": j > 0}
-                    sub.update(src=f"{c0 + vshift:.2f}", cap=cap, say=sub.get("say", cap) if j == 0 else "")
-                    cuts.append((t, t + c1 - c0, sub))
-                    t += c1 - c0
+                first_in_range = True
+                spans = speech_spans(a.source, st, en) if ln.get("jet", True) else [(st, en)]
+                for si, (a0, a1) in enumerate(spans):
+                    voices.append((t, source_audio(a.source, a0, a1)))
+                    # 長い区間は MAX_SHOT 秒ごとに画角を変えて切る(同じ字幕のまま続ける)
+                    m = max(1, int(np.ceil((a1 - a0) / MAX_SHOT)))
+                    for j in range(m):
+                        c0, c1 = a0 + (a1 - a0) * j / m, a0 + (a1 - a0) * (j + 1) / m
+                        if k == 0 and first_in_range:
+                            sub = dict(ln)
+                        else:
+                            sub = {"sub": True, "zoom": "jump" if (len(cuts) % 2) else "push", "cont": not first_in_range,
+                                   "jet": si > 0 and j == 0}
+                        sub.update(src=f"{c0 + vshift:.2f}", cap=cap, say=sub.get("say", cap) if first_in_range else "")
+                        cuts.append((t, t + c1 - c0, sub))
+                        t += c1 - c0
+                        first_in_range = False
             continue
         v = voice(ln["say"], spk, a.speed)
         dur = len(v) / SR + GAP
@@ -269,7 +309,7 @@ def main():
         mix[i:i + len(x)] += x * gain
     for at, v in voices:
         put(at, v, 1.0)
-    put(0.0, se.get("logo"), 0.5)  # 毎回同じサウンドロゴ
+    put(max(0.0, total - 1.0), se.get("logo"), 0.55)  # 毎回同じサウンドロゴ(最後。ループの継ぎ目)
     for i, (s, e, ln) in enumerate(cuts):
         if i and not ln.get("sub"):
             put(s - 0.12, se.get("whoosh"), 0.45)
@@ -334,6 +374,7 @@ def storyboard(video, out, cuts, total, title, vname, hook=None):
     from PIL import Image, ImageDraw, ImageFont
     font = ImageFont.truetype(os.path.join(FONTS, "MPLUSRounded1c-Black.ttf"), 19)
     big = ImageFont.truetype(os.path.join(FONTS, "MPLUSRounded1c-Black.ttf"), 25)
+    cuts = [c for c in cuts if not c[2].get("sub")]  # 台本の行ごとの代表コマだけ
     PW, PH, TH, COLS = 324, 576, 330, 4
     rows = (len(cuts) + COLS - 1) // COLS
     sheet = Image.new("RGB", (COLS * (PW + 20) + 20, 70 + rows * (PH + TH + 20)), "white")
@@ -342,7 +383,8 @@ def storyboard(video, out, cuts, total, title, vname, hook=None):
     with tempfile.TemporaryDirectory() as td:
         for i, (s, e, ln) in enumerate(cuts):
             png = os.path.join(td, f"{i}.png")
-            at = s + 0.45 if ln.get("badge") else min(e - 0.05, s + max(0.45, (e - s) * 0.5))
+            at = s + 0.45 if ln.get("badge") else s + max(0.45, (e - s) * 0.5)
+            at = max(0.0, min(at, e - 0.05, total - 0.1))
             subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{at:.2f}", "-i", video, "-frames:v", "1", png],
                            check=True)
             x = 20 + (i % COLS) * (PW + 20)

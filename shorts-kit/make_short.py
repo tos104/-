@@ -78,8 +78,11 @@ def main():
 
     start, end = to_sec(a.start), to_sec(a.end)
     dur = end - start
+    src_w, src_h = map(int, subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
+         "-of", "csv=p=0", a.input], check=True, capture_output=True, text=True).stdout.strip().split(","))
     fg_w = int(1080 * a.zoom) // 2 * 2
-    fg_h = int(fg_w * 9 / 16) // 2 * 2
+    fg_h = int(fg_w * src_h / src_w) // 2 * 2
     fg_top = (1920 - fg_h) // 2 - 80
 
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
@@ -89,7 +92,7 @@ def main():
         vf = (
             f"[0:v]split[a][b];"
             f"[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=30:2,eq=brightness=-0.15[bg];"
-            f"[b]scale={fg_w}:-2,crop=min(iw\\,1080):ih[fg];"
+            f"[b]scale={fg_w}:{fg_h}:flags=lanczos,unsharp=5:5:0.6,crop=min(iw\\,1080):ih[fg];"
             f"[bg][fg]overlay=(W-w)/2:{fg_top},ass='{ass}',format=yuv420p[v]"
         )
         cmd = ["ffmpeg", "-y", "-loglevel", "error", "-ss", str(start), "-t", str(dur), "-i", a.input,

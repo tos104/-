@@ -23,6 +23,7 @@ from narr_short import READINGS, probe
 SR = 48000
 GAP = 0.10
 BAND = 250  # 字幕帯(すりガラス)の高さ
+MAX_SHOT = 3.0  # 本人の声モードで、同じ画角を続ける最長(秒)
 FREEZE = 0.35  # 順位発表の頭で映像を止める秒数
 FG_TOP = 300
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -127,7 +128,8 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
                       f"{{\\an7\\pos(0,0)\\1c{WHITE}\\1a&H30&\\fad(0,110)\\p1}}m 0 0 l 1080 0 1080 1920 0 1920{{\\p0}}")
         # 字幕(ポップイン)
         cap = colorize(ln.get("cap", ln["say"]), WHITE, YELLOW if not ln.get("badge") else RED)
-        ev.append(f"Dialogue: 4,{ass_time(s + 0.03)},{ass_time(e)},Cap,,0,0,0,,{{\\an5\\pos(540,{cap_y}){pop_in()}}}{cap}")
+        anim = "" if ln.get("cont") else pop_in()
+        ev.append(f"Dialogue: 4,{ass_time(s + (0 if ln.get('cont') else 0.03))},{ass_time(e)},Cap,,0,0,0,,{{\\an5\\pos(540,{cap_y}){anim}}}{cap}")
         # 順位バッジ(画面中央に叩きつけ→フェード)
         if ln.get("badge"):
             ev.append(f"Dialogue: 6,{ass_time(s + 0.02)},{ass_time(min(e, s + 1.3))},Badge,,0,0,0,,"
@@ -231,11 +233,19 @@ def main():
             caps = ln.get("caps", [ln.get("cap", "")])
             for k, (r0, r1) in enumerate(ln["ranges"]):
                 st, en = to_sec(r0), to_sec(r1)
-                sub = dict(ln) if k == 0 else {"sub": True, "zoom": "jump"}
-                sub.update(src=r0, cap=caps[min(k, len(caps) - 1)], say=sub.get("say", caps[min(k, len(caps) - 1)]))
+                cap = caps[min(k, len(caps) - 1)]
                 voices.append((t, source_audio(a.source, st, en)))
-                cuts.append((t, t + en - st, sub))
-                t += en - st
+                # 長い区間は MAX_SHOT 秒ごとに画角を変えて切る(同じ字幕のまま続ける)
+                n = max(1, int(np.ceil((en - st) / MAX_SHOT)))
+                for j in range(n):
+                    c0, c1 = st + (en - st) * j / n, st + (en - st) * (j + 1) / n
+                    if k == 0 and j == 0:
+                        sub = dict(ln)
+                    else:
+                        sub = {"sub": True, "zoom": "jump" if (k + j) % 2 else "push", "cont": j > 0}
+                    sub.update(src=f"{c0:.2f}", cap=cap, say=sub.get("say", cap) if j == 0 else "")
+                    cuts.append((t, t + c1 - c0, sub))
+                    t += c1 - c0
             continue
         v = voice(ln["say"], spk, a.speed)
         dur = len(v) / SR + GAP
@@ -255,7 +265,8 @@ def main():
     for i, (s, e, ln) in enumerate(cuts):
         if i and not ln.get("sub"):
             put(s - 0.12, se.get("whoosh"), 0.45)
-        put(s + 0.03, se.get("pop"), 0.35)
+        if not ln.get("cont"):
+            put(s + 0.03, se.get("pop"), 0.35)
         if ln.get("badge"):
             put(s, se.get("impact"), 0.7)
         if ln.get("pre_se"):
@@ -303,7 +314,7 @@ def main():
         os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-i", wav,
                         "-filter_complex", vf, "-map", "[v]", "-map", "1:a", "-c:v", "libx264", "-crf", "19",
-                        "-af", "loudnorm=I=-14:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", a.out], check=True)
+                        "-af", "loudnorm=I=-11.5:TP=-1.0:LRA=11", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", a.out], check=True)
 
         if a.storyboard:
             storyboard(a.out, a.storyboard, cuts, total, os.path.basename(a.script), speaker_name(spk), sc.get("hook"))

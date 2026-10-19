@@ -22,6 +22,7 @@ from narr_short import READINGS, probe
 
 SR = 48000
 GAP = 0.10
+BAND = 250  # 字幕帯(すりガラス)の高さ
 FREEZE = 0.35  # 順位発表の頭で映像を止める秒数
 FG_TOP = 300
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -99,14 +100,14 @@ def build_ass(path, header, cuts, total, fg_bottom, hook=None):
                       f"{{\\an5\\pos(540,{y})\\frz3{pop_in(150)}\\fad(0,150)}}{colorize(word, WHITE, YELLOW)}")
         ev.append(f"Dialogue: 7,{ass_time(0)},{ass_time(end0)},Box,,0,0,0,,"
                   f"{{\\an7\\pos(0,0)\\1c{BLACK}\\1a&H60&\\fad(0,150)\\p1}}{rect(0, FG_TOP, 1080, fg_bottom - 250)}{{\\p0}}")
-    band_top = fg_bottom - 250
+    band_top = fg_bottom - BAND
     cap_y = band_top + 125
     # 見出し(太い黒フチ1層。二重フチは極太書体だと字が潰れる)
     ev.append(f"Dialogue: 1,{ass_time(0)},{ass_time(total)},Head,,0,0,0,,"
               f"{{\\an8\\pos(540,46){pop_in(200)}}}{colorize(header, WHITE, YELLOW)}")
-    # 字幕の下敷き帯(元動画のテロップを隠す)
+    # 字幕の帯はすりガラス(映像側でぼかし済み)。上端に細い区切り線だけ引く
     ev.append(f"Dialogue: 2,{ass_time(0)},{ass_time(total)},Box,,0,0,0,,"
-              f"{{\\an7\\pos(0,0)\\1c{BLACK}\\1a&H00&\\p1}}m 0 {band_top} l 1080 {band_top} 1080 {fg_bottom} 0 {fg_bottom}{{\\p0}}")
+              f"{{\\an7\\pos(0,0)\\1c{YELLOW}\\1a&H60&\\p1}}{rect(0, band_top, 1080, band_top + 4)}{{\\p0}}")
     # ランキング表: 冒頭から「？？？」で並べ、順位の発表時に埋める
     board = sorted([(int(re.sub(r"\D", "", ln["badge"])), s, ln) for s, e, ln in cuts if ln.get("badge")])
     for row, (rank, s, ln) in enumerate(board):
@@ -280,7 +281,9 @@ def main():
         build_ass(ass, sc.get("header", ""), cuts, total, fg_bottom, sc.get("hook"))
         vf = (f"[0:v]split[a][b];"
               f"[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2,eq=brightness=-0.3:saturation=1.2[bg];"
-              f"[bg][b]overlay=0:{FG_TOP},noise=alls=6:allf=t,vignette=PI/5,"
+              f"[b]split[f1][f2];[f2]crop=1080:{BAND}:0:{fg_h - BAND},boxblur=22:3,eq=brightness=-0.28:saturation=0.35[glass];"
+              f"[f1][glass]overlay=0:{fg_h - BAND}[fgx];"
+              f"[bg][fgx]overlay=0:{FG_TOP},noise=alls=6:allf=t,vignette=PI/5,"
               f"ass='{ass}':fontsdir='{FONTS}',format=yuv420p[v]")
         os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-i", wav,

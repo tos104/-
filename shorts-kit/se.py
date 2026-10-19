@@ -93,7 +93,16 @@ def logo(dur=0.95):
     return _norm(out, 0.5)
 
 
-SOUNDS = {"logo": logo, "whoosh": whoosh, "pop": pop, "impact": impact, "kira": kira, "drumroll": drumroll, "ding": ding}
+def riser(dur=1.0):
+    """上昇音: クライマックス前の転調・溜め。"""
+    t = _t(dur)
+    f = 250 * (8 ** (t / dur))
+    tone = np.sin(2 * np.pi * np.cumsum(f) / SR)
+    air = _lowpass(rng.standard_normal(len(t)), 600 + 6000 * t / dur)
+    return _norm((tone * 0.6 + air * 0.5) * (t / dur) ** 2, 0.5)
+
+
+SOUNDS = {"logo": logo, "riser": riser, "whoosh": whoosh, "pop": pop, "impact": impact, "kira": kira, "drumroll": drumroll, "ding": ding}
 
 
 def get(name):

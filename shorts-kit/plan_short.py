@@ -120,8 +120,8 @@ WrapStyle: 2
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Head,{rs.HEAD_FONT},100,{rs.RED},{rs.RED},{rs.WHITE},&H00000000&,0,0,0,0,100,100,0,0,1,6,0,5,20,20,0,1
-Style: Cap,{rs.CAP_FONT},80,{rs.WHITE},{rs.WHITE},{rs.BLACK},&H00000000&,0,0,0,0,100,100,0,0,1,8,0,5,40,40,0,1
+Style: Head,{rs.HEAD_FONT},108,{rs.RED},{rs.RED},{rs.WHITE},&H00000000&,0,0,0,0,100,100,-6,0,1,6,0,5,20,20,0,1
+Style: Cap,{rs.CAP_FONT},70,{rs.WHITE},{rs.WHITE},{rs.BLACK},&H00000000&,0,0,0,0,100,100,0,0,1,8,0,5,40,40,0,1
 Style: Box,Arial,10,{rs.WHITE},{rs.WHITE},{rs.BLACK},&H00000000&,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1
 
 [Events]

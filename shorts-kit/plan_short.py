@@ -84,6 +84,12 @@ def main():
             events.append((t, t + dur, c.get("cap", "")))
             t += dur
         total = t
+        # 読み切れる時間の確認: 日本語は 1 秒 8 文字 + 認識に 0.3 秒(目安)
+        for s_, e_, cap in events:
+            n = len(re.sub(r"[{}|]", "", cap))
+            need = n / 8 + 0.3
+            if cap and e_ - s_ < need:
+                print(f"[READ] {s_:.1f}-{e_:.1f}秒 {n}字: 表示 {e_ - s_:.2f}秒 < 必要 {need:.2f}秒 「{re.sub(r'[{}]', '', cap)}」")
 
         # 音: 声を倍速(音程はそのまま)にして並べ、効果音は各カットの頭に
         mix = np.zeros(int((total + 0.5) * SR), np.float32)

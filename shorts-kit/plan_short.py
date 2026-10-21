@@ -24,7 +24,7 @@ from make_short import to_sec, ass_time
 
 SR = rs.SR
 W, H = 1080, 1920
-BAND_TOP = 340           # 上の黒帯(元動画の上テロップとロゴを隠す)
+BAND_TOP = 390           # 上の黒帯(元動画の上テロップとロゴを隠す)
 GLASS_TOP = 1300         # 下のすりガラス帯(元動画の下テロップを隠す)
 CAP_Y = 1470
 JET_MIN, JET_PAD = 0.15, 0.03  # 0.15 秒以上の間を詰める。声の前後に 0.03 秒残す
@@ -67,15 +67,19 @@ def main():
             src_len = len(voice) / SR
             # 映像: 別の位置を被せるときは連続した映像、そうでなければ声と同じ区間(ジャンプカット)
             vsegs = [(to_sec(c["v"]), to_sec(c["v"]) + src_len)] if c.get("v") else spans
+            frames = 0  # 長さはコマ数で数える(秒のまま足すと端数がたまり、字幕と映像がずれる)
             for k, (v0, v1) in enumerate(vsegs):
                 d = v1 - v0
+                n = max(1, round(d / speed * 30))
                 p = os.path.join(td, f"p{i:02d}_{k:02d}.mp4")
                 vf = (f"{crop_filter(src_w, src_h, c.get('cx', src_w / 2), c.get('z', 1.0), c.get('pan'), d)},"
-                      f"setpts=PTS/{speed},fps=30,format=yuv420p")
-                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{v0:.3f}", "-t", f"{d:.3f}",
-                                "-i", a.source, "-an", "-vf", vf, "-c:v", "libx264", "-crf", "16", p], check=True)
+                      f"setpts=PTS/{speed},fps=30,tpad=stop_mode=clone:stop_duration=1,format=yuv420p")
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{v0:.3f}", "-t", f"{d + 0.2:.3f}",
+                                "-i", a.source, "-an", "-vf", vf, "-frames:v", str(n),
+                                "-c:v", "libx264", "-crf", "16", p], check=True)
                 parts.append(p)
-            dur = src_len / speed
+                frames += n
+            dur = frames / 30
             audio.append((t, voice, c.get("se")))
             events.append((t, t + dur, c.get("cap", "")))
             t += dur

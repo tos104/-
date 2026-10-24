@@ -39,7 +39,8 @@ CREAM, EDGE_TOP, EDGE_BOT = (239, 239, 230), (186, 187, 172), (182, 183, 174)
 INK, SUB = (26, 56, 48), (120, 126, 120)
 TONE = {"red": (180, 35, 44), "green": (32, 96, 64)}
 PILL = {"green": (210, 234, 96), "orange": (240, 192, 120)}
-JET_MIN, JET_PAD = 0.15, 0.03
+JET_MIN, JET_PAD = 0.35, 0.10  # 0.35 秒以上の間だけ詰める。語尾が切れないよう前後に 0.1 秒残す
+SLIDE = 0.25  # 切り替えで元動画が左へ流れる秒数
 
 
 def font(path, size):
@@ -346,12 +347,26 @@ def board(plan, source, out):
         print(mo, strip.size)
 
 
+def voice_spans(source, a0, a1):
+    """カットの中の長い間だけを詰める。頭と尻は設計図の位置(語の切れ目)のまま、重なった区間はつなぐ。"""
+    spans = sorted(rs.speech_spans(source, a0, a1))
+    merged = []
+    for x, y in spans:
+        if merged and x <= merged[-1][1] + 0.02:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], y))
+        else:
+            merged.append((x, y))
+    merged[0] = (a0, merged[0][1])
+    merged[-1] = (merged[-1][0], a1)
+    return merged
+
+
 def render(plan, source, out):
     speed = plan.get("speed", 1.0)
     src_w, src_h = rs.probe(source)
     rs.JET_MIN, rs.JET_PAD = JET_MIN, JET_PAD
     with tempfile.TemporaryDirectory() as td:
-        parts, audio, t = [], [], 0.0
+        parts, audio, t, prev_last = [], [], 0.0, None
         for i, b in enumerate(plan["beats"]):
             fx = b.get("panel", {}).get("fx")
             n_anim = math.ceil(fx_length(fx) * 30) + 1 if fx else 1
@@ -361,7 +376,7 @@ def render(plan, source, out):
             local = 0  # 区切りの頭からのコマ数
             for j, c in enumerate(b["cuts"]):
                 a0, a1 = to_sec(c["a"][0]), to_sec(c["a"][1])
-                spans = rs.speech_spans(source, a0, a1) if c.get("jet", True) else [(a0, a1)]
+                spans = voice_spans(source, a0, a1) if c.get("jet", True) else [(a0, a1)]
                 voice = np.concatenate([rs.source_audio(source, s0, s1) for s0, s1 in spans])
                 vsegs = [(to_sec(c["v"]), to_sec(c["v"]) + len(voice) / SR)] if c.get("v") else spans
                 frames = 0
@@ -369,8 +384,17 @@ def render(plan, source, out):
                     d = v1 - v0
                     n = max(1, round(d / speed * 30))
                     p = os.path.join(td, f"p{i:02d}_{j:02d}_{k:02d}.mp4")
-                    fc = (f"[1:v]{vid_filter(c, src_w, src_h, speed)},tpad=stop_mode=clone:stop_duration=1[v];"
-                          f"[0:v]setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=600[b];[b][v]overlay=0:{VID_Y},format=yuv420p")
+                    slide = i > 0 and j == 0 and k == 0 and b.get("slide", True) and prev_last
+                    if slide:  # 前の映像が左へ抜け、新しい映像が右から入る
+                        P = f"(1-pow(1-min(t/{SLIDE},1),3))"
+                        fc = (f"[1:v]{vid_filter(c, src_w, src_h, speed)},tpad=stop_mode=clone:stop_duration=1[v];"
+                              f"[0:v]setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=600[b];"
+                              f"[2:v]setpts=PTS-STARTPTS[o];"
+                              f"[b][o]overlay=x='-{W}*{P}':y={VID_Y}:eval=frame:eof_action=pass[bo];"
+                              f"[bo][v]overlay=x='{W}*(1-{P})':y={VID_Y}:eval=frame,format=yuv420p")
+                    else:
+                        fc = (f"[1:v]{vid_filter(c, src_w, src_h, speed)},tpad=stop_mode=clone:stop_duration=1[v];"
+                              f"[0:v]setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=600[b];[b][v]overlay=0:{VID_Y},format=yuv420p")
                     seq = os.path.join(td, f"bg{i:02d}_%04d.png")
                     if loop:
                         bg_in = ["-loop", "1", "-framerate", "30", "-start_number", str(local % n_anim), "-i", seq]
@@ -379,13 +403,19 @@ def render(plan, source, out):
                     else:
                         bg_in = ["-loop", "1", "-framerate", "30", "-i", seq % (n_anim - 1)]
                     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *bg_in,
-                                    "-ss", f"{v0:.3f}", "-t", f"{d + 0.2:.3f}", "-i", source, "-an",
+                                    "-ss", f"{v0:.3f}", "-t", f"{d + 0.2:.3f}", "-i", source,
+                                    *(["-loop", "1", "-t", f"{SLIDE + 0.1:.2f}", "-i", prev_last] if slide else []), "-an",
                                     "-filter_complex", fc, "-frames:v", str(n), "-c:v", "libx264", "-crf", "16", p],
                                    check=True)
                     parts.append(p)
                     frames += n
                     local += n
-                audio.append((t, voice, c.get("se")))
+                    # 次の切り替え用に、最後のコマの帯部分を取っておく
+                    prev_last = os.path.join(td, "last.png")
+                    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-sseof", "-0.1", "-i", p, "-update", "1",
+                                    "-vf", f"crop={W}:{VID_H}:0:{VID_Y}", prev_last], check=True)
+                sfx = c.get("se") or ("whoosh" if i > 0 and j == 0 and b.get("slide", True) else None)
+                audio.append((t, voice, sfx))
                 t += frames / 30
         total = t
         mix = np.zeros(int((total + 0.5) * SR), np.float32)
@@ -398,7 +428,8 @@ def render(plan, source, out):
             i0 = int(at * SR); mix[i0:i0 + len(x)] += x[: len(mix) - i0]
             if name:
                 s_ = se.get(name) * 0.3
-                mix[i0:i0 + len(s_)] += s_[: len(mix) - i0]
+                j0 = max(0, i0 - int(0.15 * SR)) if name == "whoosh" else i0  # シュッは切り替えの少し前から(声の頭に重ねない)
+                mix[j0:j0 + len(s_)] += s_[: len(mix) - j0]
         mix = mix[: int(total * SR)]
         mix /= max(1.0, np.abs(mix).max() / 0.95)
         wav = os.path.join(td, "mix.wav"); se.write_wav(wav, mix)

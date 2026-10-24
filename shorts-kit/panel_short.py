@@ -283,7 +283,7 @@ def vid_filter(beat_cut, src_w, src_h, speed):
         crop = f"crop={cw}:{ch}:{x:.0f}:{y:.0f},"
     else:
         crop = ""
-    return f"{crop}scale={W}:{VID_H}:flags=lanczos,unsharp=5:5:0.4,setpts=PTS/{speed},fps=30"
+    return f"{crop}scale={W}:{VID_H}:flags=lanczos,unsharp=5:5:0.4,setpts=(PTS-STARTPTS)/{speed},fps=30"
 
 
 def board(plan, source, out):
@@ -370,7 +370,7 @@ def render(plan, source, out):
                     n = max(1, round(d / speed * 30))
                     p = os.path.join(td, f"p{i:02d}_{j:02d}_{k:02d}.mp4")
                     fc = (f"[1:v]{vid_filter(c, src_w, src_h, speed)},tpad=stop_mode=clone:stop_duration=1[v];"
-                          f"[0:v]tpad=stop_mode=clone:stop_duration=600[b];[b][v]overlay=0:{VID_Y},format=yuv420p")
+                          f"[0:v]setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=600[b];[b][v]overlay=0:{VID_Y},format=yuv420p")
                     seq = os.path.join(td, f"bg{i:02d}_%04d.png")
                     if loop:
                         bg_in = ["-loop", "1", "-framerate", "30", "-start_number", str(local % n_anim), "-i", seq]

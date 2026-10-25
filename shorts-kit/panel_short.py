@@ -120,13 +120,16 @@ def back(x):
 
 
 FX_H = {"bars": lambda fx: 120 * len(fx["rows"]), "count": lambda fx: 140, "arrow": lambda fx: 200,
-        "stamp": lambda fx: 250, "plays": lambda fx: 160, "bounce": lambda fx: 90}
+        "stamp": lambda fx: 250, "plays": lambda fx: 160, "bounce": lambda fx: 90,
+        "survive": lambda fx: 190, "chips": lambda fx: 104 * len(fx["items"])}
 
 
 def fx_length(fx):
     """動きが終わるまでの秒(bounce は 1 周期)。"""
     return {"bars": 0.3 * (len(fx.get("rows", [])) - 1) + 0.5, "count": 0.07 * fx.get("n", 0) + 0.3,
-            "arrow": 0.85, "stamp": 0.3, "plays": 0.55, "bounce": 0.8}[fx["type"]]
+            "arrow": 0.85, "stamp": 0.3, "plays": 0.55, "bounce": 0.8,
+            "survive": 0.4 + 0.25 * fx.get("n", 4),
+            "chips": max(fx.get("at", [0.3 * k for k in range(len(fx.get("items", [])))]) or [0]) + 0.3}[fx["type"]]
 
 
 def paste_pop(img, sprite, cx, cy, k, alpha=1.0):
@@ -214,6 +217,50 @@ def draw_fx(img, fx, y, t):
         td_.polygon([(tw_ / 2 - 22, th_ / 2 - 28), (tw_ / 2 - 22, th_ / 2 + 28), (tw_ / 2 + 30, th_ / 2)], fill=(255, 255, 255))
         for k in range(n):
             paste_pop(img, tile, x0 + k * (tw_ + gap) + tw_ / 2, y + 75, back((T - 0.15 * k) / 0.25))
+    elif kind == "survive":  # n 枚のカードが並び、残す 1 枚以外に順に×が付いて暗くなる
+        n, keep, cw, ch, gap = fx.get("n", 4), fx.get("keep", 0), 120, 168, 34
+        x0 = (W - (n * cw + (n - 1) * gap)) / 2
+        cy = y + 95
+        for k in range(n):
+            card = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+            cd = ImageDraw.Draw(card)
+            cd.rounded_rectangle((0, 0, cw - 1, ch - 1), radius=10, fill=(205, 168, 82))
+            cd.rounded_rectangle((12, 26, cw - 13, ch - 54), radius=6, fill=(52, 64, 88))
+            cd.rectangle((12, ch - 44, cw - 13, ch - 14), fill=(235, 222, 186))
+            others = [j for j in range(n) if j != keep]
+            if k != keep:
+                q = ease((T - 0.4 - 0.25 * others.index(k)) / 0.2)
+                if q > 0:
+                    dim = Image.new("RGBA", (cw, ch), (239, 239, 230, int(170 * q)))
+                    card = Image.alpha_composite(card, dim)
+                    cd = ImageDraw.Draw(card)
+                    m = 22
+                    cd.line((m, m + 10, cw - m, ch - m - 10), fill=TONE["red"] + (int(255 * q),), width=12)
+                    cd.line((cw - m, m + 10, m, ch - m - 10), fill=TONE["red"] + (int(255 * q),), width=12)
+            elif T > 0.4 + 0.25 * (n - 1):
+                ring = Image.new("RGBA", (cw + 24, ch + 24), (0, 0, 0, 0))
+                ImageDraw.Draw(ring).rounded_rectangle((0, 0, cw + 23, ch + 23), radius=16, outline=TONE["green"], width=8)
+                img.paste(ring, (int(x0 + k * (cw + gap) - 12), int(cy - ch / 2 - 12)), ring)
+            paste_pop(img, card, x0 + k * (cw + gap) + cw / 2, cy, back((T - 0.06 * k) / 0.25))
+    elif kind == "chips":  # 名前の札が 1 枚ずつ出る(右に赤い札)。at は区切りの頭からの秒
+        items, tag = fx["items"], fx.get("tag", "")
+        ats = fx.get("at", [0.3 * k for k in range(len(items))])
+        fb, ft = font(F_HEAD, 58), font(F_HEAD, 40)
+        for k, name in enumerate(items):
+            p = back((T - ats[k]) / 0.25)
+            if p <= 0.01:
+                continue
+            nw = d.textlength(name, font=fb)
+            tw = d.textlength(tag, font=ft) + 36 if tag else 0
+            w_ = int(nw + 60 + tw + (20 if tag else 0))
+            row = Image.new("RGBA", (w_, 88), (0, 0, 0, 0))
+            rd = ImageDraw.Draw(row)
+            rd.rounded_rectangle((0, 0, w_ - 1, 87), radius=18, fill=(255, 255, 250), outline=(200, 202, 190), width=3)
+            rd.text((30, 45), name, font=fb, fill=INK, anchor="lm")
+            if tag:
+                rd.rounded_rectangle((w_ - tw - 14, 16, w_ - 14, 72), radius=12, fill=TONE["red"])
+                rd.text((w_ - 14 - tw / 2, 45), tag, font=ft, fill=(255, 255, 255), anchor="mm")
+            paste_pop(img, row, W / 2, y + 46 + 104 * k, p)
     elif kind == "bounce":  # 下向きの矢印が上下に揺れる(ループ)
         off = 0 if t is None else 14 * abs(math.sin(math.pi * (t % 0.8) / 0.8))
         cx, cy = W / 2, y + 30 + off
@@ -269,7 +316,7 @@ def overlay(beat, source, t=None):
         f = font(F_HEAD, 74 if k else 62)
         rich(d, y + 40, line, f, INK, TONE[p.get("tone", "red")]); y += 92
     if p.get("below"):
-        rich(d, y + 35, p["below"], font(F_HEAD, 66), INK, INK); y += 90
+        rich(d, y + 35, p["below"], fit(d, p["below"], F_HEAD, 66, W - 120), INK, INK); y += 90
     if p.get("foot"):
         d.text((W / 2, y + 20), p["foot"], font=font(F_BODY, 32), fill=SUB, anchor="mm")
     return img
@@ -331,7 +378,7 @@ def board(plan, source, out):
     # 動きのコマ送り(図解・スタンプのある区切りだけ。パネル部分を時間順に並べる)
     rows = [(i, b) for i, b in enumerate(plan["beats"]) if b.get("panel", {}).get("fx")]
     if rows:
-        times = [0.0, 0.1, 0.2, 0.35, 0.6, None]
+        times = plan.get("motion_times", [0.0, 0.1, 0.2, 0.35, 0.6, None])
         cw, chh = W // 2, (PANEL[1] - PANEL[0]) // 2
         strip = Image.new("RGB", (160 + len(times) * (cw + 10), len(rows) * (chh + 10) + 60), (225, 225, 220))
         sd = ImageDraw.Draw(strip)

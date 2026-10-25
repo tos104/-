@@ -243,7 +243,7 @@ def draw_fx(img, fx, y, t):
                 ring = Image.new("RGBA", (cw + 24, ch + 24), (0, 0, 0, 0))
                 ImageDraw.Draw(ring).rounded_rectangle((0, 0, cw + 23, ch + 23), radius=16, outline=TONE["green"], width=8)
                 img.paste(ring, (int(x0 + k * (cw + gap) - 12), int(cy - ch / 2 - 12)), ring)
-            paste_pop(img, card, x0 + k * (cw + gap) + cw / 2, cy, back((T - 0.06 * k) / 0.25))
+            paste_pop(img, card, x0 + k * (cw + gap) + cw / 2, cy, 1.0 if fx.get("instant") else back((T - 0.06 * k) / 0.25))
     elif kind == "chips":  # 名前の札が 1 枚ずつ出る(右に赤い札)。at は区切りの頭からの秒
         items, tag = fx["items"], fx.get("tag", "")
         ats = fx.get("at", [0.3 * k for k in range(len(items))])

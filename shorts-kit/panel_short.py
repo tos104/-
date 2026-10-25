@@ -193,7 +193,7 @@ def draw_fx(img, fx, y, t):
         rx = bx[2] + gapw
         box = Image.new("RGBA", (int(rw), 110), (0, 0, 0, 0))
         bd = ImageDraw.Draw(box)
-        bd.rounded_rectangle((0, 0, rw - 1, 109), radius=20, fill=PILL["green"])
+        bd.rounded_rectangle((0, 0, rw - 1, 109), radius=20, fill=PILL[fx.get("right_tone", "green")])
         bd.text((rw / 2, 56), v2, font=fb, fill=TONE["green"], anchor="mm")
         k = back((T - 0.5) / 0.3)
         if k > 0.01:

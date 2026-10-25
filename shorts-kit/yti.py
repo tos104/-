@@ -27,9 +27,11 @@ def shorts(bid, pages=6):
             om=s.get("overlayMetadata",{})
             vid=s.get("onTap",{}).get("innertubeCommand",{}).get("reelWatchEndpoint",{}).get("videoId")
             out.append((vid, om.get("primaryText",{}).get("content"), om.get("secondaryText",{}).get("content")))
-        tok=[c["continuationCommand"]["token"] for c in walk(d,"continuationEndpoint") if "continuationCommand" in c]
+        # 続きのページの鍵は一覧の末尾(continuationItemRenderer)にある。ほかの continuationEndpoint は並べ替えなど
+        tok=[c["continuationEndpoint"]["continuationCommand"]["token"] for c in walk(d,"continuationItemRenderer")
+             if "continuationCommand" in c.get("continuationEndpoint",{})]
         if not tok: break
-        d=call("browse",{"continuation":tok[-1]})
+        d=call("browse",{"continuation":tok[0]})
     return out
 def views(s):
     s=(s or "").replace("回視聴","").replace(",","").strip()

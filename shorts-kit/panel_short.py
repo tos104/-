@@ -302,8 +302,11 @@ def overlay(beat, source, t=None):
     d.rectangle((0, BAND[0], W, BAND[1]), fill=(0, 0, 0))
     l1, l2 = beat["head"]
     tone = TONE[beat.get("tone", "green")]
-    rich(d, 215, l1, fit(d, l1, F_HEAD, 70, W - 120), INK, tone)
-    rich(d, 318, l2, fit(d, l2, F_BIG, 100, W - 100), tone, tone)
+    if l1:
+        rich(d, 215, l1, fit(d, l1, F_HEAD, 70, W - 120), INK, tone)
+        rich(d, 318, l2, fit(d, l2, F_BIG, 100, W - 100), tone, tone)
+    else:  # 見出し1行: 見出しの枠の中央に大きく
+        rich(d, 268, l2, fit(d, l2, F_BIG, 96, W - 100), INK, tone)
 
     p = beat.get("panel", {})
     # パネルの中身は縦方向の中央にそろえる(先に高さを測る)

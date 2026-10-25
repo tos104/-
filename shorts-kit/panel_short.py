@@ -121,7 +121,8 @@ def back(x):
 
 FX_H = {"bars": lambda fx: 120 * len(fx["rows"]), "count": lambda fx: 140, "arrow": lambda fx: 200,
         "stamp": lambda fx: 250, "plays": lambda fx: 160, "bounce": lambda fx: 90,
-        "survive": lambda fx: 190, "chips": lambda fx: 104 * len(fx["items"])}
+        "survive": lambda fx: 190, "chips": lambda fx: 104 * len(fx["items"]),
+        "counter": lambda fx: 190, "ledger": lambda fx: 92 * len(fx["rows"]) + 20}
 
 
 def fx_length(fx):
@@ -129,6 +130,7 @@ def fx_length(fx):
     return {"bars": 0.3 * (len(fx.get("rows", [])) - 1) + 0.5, "count": 0.07 * fx.get("n", 0) + 0.3,
             "arrow": 0.85, "stamp": 0.3, "plays": 0.55, "bounce": 0.8,
             "survive": 0.4 + 0.25 * fx.get("n", 4),
+            "counter": 0.9, "ledger": 0.35 * len(fx.get("rows", [])) + 0.3,
             "chips": max(fx.get("at", [0.3 * k for k in range(len(fx.get("items", [])))]) or [0]) + 0.3}[fx["type"]]
 
 
@@ -261,6 +263,32 @@ def draw_fx(img, fx, y, t):
                 rd.rounded_rectangle((w_ - tw - 14, 16, w_ - 14, 72), radius=12, fill=TONE["red"])
                 rd.text((w_ - 14 - tw / 2, 45), tag, font=ft, fill=(255, 255, 255), anchor="mm")
             paste_pop(img, row, W / 2, y + 46 + 104 * k, p)
+    elif kind == "counter":  # 金額が 0 から数え上がる(0.8 秒)
+        p = ease(T / 0.8)
+        v = round(fx["value"] * p)
+        txt = f"{fx.get('prefix', '')}{v:,}{fx.get('suffix', '')}"
+        f = font(F_BIG, fx.get("size", 120))
+        full = f"{fx.get('prefix', '')}{fx['value']:,}{fx.get('suffix', '')}"
+        tw = d.textlength(full, font=f)
+        x0 = (W - tw) / 2 - 40
+        d.rounded_rectangle((x0, y + 20, W - x0, y + 180), radius=26, fill=PILL[fx.get("tone", "green")])
+        d.text((W / 2, y + 102), txt, font=f, fill=TONE["green"], anchor="mm")
+    elif kind == "ledger":  # 収支の表。1 行ずつ出て、最後の行(合計)は線の下で強調
+        rows = fx["rows"]
+        fl, fv = font(F_HEAD, 50), font(F_BIG, 56)
+        xl, xr = 150, W - 150
+        for k, (label, value) in enumerate(rows):
+            p = ease((T - 0.35 * k) / 0.3)
+            if p <= 0:
+                continue
+            last = k == len(rows) - 1
+            yy = y + 46 + 92 * k + (20 if last else 0) + (1 - p) * 30
+            col = TONE["green"] if last else (TONE["red"] if value.startswith("−") else INK)
+            if last:
+                d.line((xl, yy - 52, xr, yy - 52), fill=INK, width=5)
+                d.rounded_rectangle((xl - 20, yy - 42, xr + 20, yy + 42), radius=16, fill=PILL["green"])
+            d.text((xl, yy), label, font=fl, fill=INK, anchor="lm")
+            d.text((xr, yy), value, font=fv, fill=col, anchor="rm")
     elif kind == "bounce":  # 下向きの矢印が上下に揺れる(ループ)
         off = 0 if t is None else 14 * abs(math.sin(math.pi * (t % 0.8) / 0.8))
         cx, cy = W / 2, y + 30 + off

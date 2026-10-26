@@ -1,0 +1,57 @@
+{
+ "assets": "../../output/tangatable/assets",
+ "shots": [
+  {
+   "img": "2026-03-11_01.jpg",
+   "dur": 3.0,
+   "cam": "push",
+   "fx": "vcap",
+   "name": "和牛ステーキ",
+   "sub": "¥5,500コースより",
+   "text_at": 1.2,
+   "leak": true,
+   "grain": true,
+   "note": "HOOK=文字なしの料理。最初の1.2秒は写真だけで止める"
+  },
+  {
+   "img": "2026-09-02_01.jpg",
+   "dur": 2.8,
+   "cam": "push",
+   "fx": "vcap",
+   "trans": "dip",
+   "name": "茹で豚のマスタード",
+   "sub": "¥5,500コース（6品）",
+   "text_at": 0.4,
+   "leak": true,
+   "grain": true,
+   "note": "2品目も¥5,500コース(投稿文で明記)"
+  },
+  {
+   "img": "2026-06-03_03.jpg",
+   "dur": 2.6,
+   "cam": "push",
+   "fx": "vcap",
+   "trans": "dip",
+   "name": "ハーブチキン",
+   "sub": "¥4,400コース（4品）",
+   "text_at": 0.4,
+   "leak": true,
+   "grain": true,
+   "note": "手頃な¥4,400コースの一品(投稿文で明記)"
+  },
+  {
+   "img": "2026-03-11_01.jpg",
+   "dur": 3.4,
+   "cam": "pullback",
+   "fx": "frame",
+   "trans": "dip",
+   "text": [
+    "料理で選ぶ、忘年会。",
+    "全コース90分飲み放題つき・税込",
+    "ハイライトから予約"
+   ],
+   "grain": true,
+   "note": "CTA: 枠を描いて上品に締める(予約先は投稿文で)"
+  }
+ ]
+}

@@ -31,7 +31,10 @@ def subs(bid):
 
 
 def detail(vid):
-    d = call("next", {"videoId": vid})
+    try:
+        d = call("next", {"videoId": vid})
+    except Exception:  # 動画詳細(next)が拒否されても、再生数と登録者の記録は続ける
+        return {"likes": None, "date": None}
     s = json.dumps(d, ensure_ascii=False)
     likes = re.search(r'"likeCountIfIndifferentNumber": "(\d+)"', s)
     p = next(walk(d, "videoPrimaryInfoRenderer"), {})

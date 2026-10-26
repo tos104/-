@@ -1,0 +1,138 @@
+{
+ "assets": "../../output/tangatable/assets",
+ "shots": [
+  {
+   "video": "route_raw.mov",
+   "start": 0,
+   "speed": 2.0,
+   "dur": 3.0,
+   "fx": "route",
+   "instant": true,
+   "p": [
+    0.0,
+    0.08
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "text": [
+    "幹事さん、",
+    "{会場の案内}はこれ1本で"
+   ],
+   "note": "HOOK=幹事の手間(場所の説明)。旦過市場の入口から実際に歩き出す"
+  },
+  {
+   "video": "route_raw.mov",
+   "start": 6,
+   "speed": 12.0,
+   "dur": 4.6,
+   "fx": "route",
+   "trans": "slide",
+   "p": [
+    0.08,
+    0.5
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "text": [
+    "{旦過市場}から",
+    "歩いてすぐ"
+   ],
+   "note": "道のりを早送りで。文言はプロフィールの表現どおり"
+  },
+  {
+   "video": "route_raw.mov",
+   "start": 72.5,
+   "speed": 1.5,
+   "dur": 4.4,
+   "fx": "route",
+   "trans": "punch",
+   "p": [
+    0.5,
+    0.7
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "tag": "カラフルなエレベーターが目印",
+   "note": "目印: 店の投稿(2025-06-16)「カラフルなエレベーターがタンガテーブルの目印」"
+  },
+  {
+   "video": "route_raw.mov",
+   "start": 79.5,
+   "speed": 1.0,
+   "dur": 1.8,
+   "fx": "route",
+   "trans": "punch",
+   "p": [
+    0.7,
+    0.78
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "tag": "ホラヤビル 4F",
+   "note": "4階のボタンを押す手元。住所はプロフィールの表記"
+  },
+  {
+   "video": "route_raw.mov",
+   "start": 102,
+   "speed": 2.0,
+   "dur": 3.2,
+   "fx": "route",
+   "trans": "fade",
+   "p": [
+    0.78,
+    0.9
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "note": "4Fの店名サインと扉が開く瞬間。文字は下に置き、サインを隠さない。扉が開いた直後の白飛びの前で切る",
+   "tag": "4階で扉が開いたら到着",
+   "bar": false
+  },
+  {
+   "video": "route_raw.mov",
+   "start": 116,
+   "speed": 2.5,
+   "dur": 4.0,
+   "fx": "route",
+   "trans": "fade",
+   "p": [
+    0.9,
+    1.0
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "tag": "着席40名／立食80名の会場",
+   "note": "会場に入る。人数は確定情報"
+  },
+  {
+   "video": "route_raw.mov",
+   "start": 126,
+   "speed": 1.0,
+   "dur": 4.5,
+   "fx": "stamp",
+   "trans": "fade",
+   "stamp": [
+    "幹事",
+    "1名無料"
+   ],
+   "text": [
+    "10名以上のご予約で",
+    "ご予約はDM・メール・お電話で",
+    "この動画を参加者に送ってください"
+   ],
+   "note": "CTA: 幹事特典と予約方法。最後に『この動画を送る』行動を渡す(シェア・保存を狙う)"
+  }
+ ]
+}

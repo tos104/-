@@ -60,6 +60,41 @@ def cover(img, w, h):
     return img.crop((x, y, x + w, y + h))
 
 
+class VideoShot:
+    """動画の一区間を、速さを変えて全面に敷く。書き出しは順に読み、絵コンテは 1 コマずつ取り出す。"""
+
+    def __init__(self, path, start, speed, seq=True):
+        self.path, self.start, self.speed, self.pipe, self.next, self.seq = path, start, speed, None, 0, seq
+        self.vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,crop={W}:{H},"
+                   f"unsharp=5:5:0.6")
+
+    def _one(self, t):
+        out = subprocess.run(["ffmpeg", "-loglevel", "error", "-ss", f"{self.start + t * self.speed:.3f}", "-i",
+                              self.path, "-frames:v", "1", "-vf", self.vf, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                             capture_output=True, check=True).stdout
+        return Image.frombytes("RGB", (W, H), out[:W * H * 3])
+
+    def frame(self, t, dur):
+        i = round(t * FPS)
+        if not self.seq or i != self.next:  # 順番どおりでなければ 1 コマだけ取り出す(絵コンテ用)
+            return self._one(t)
+        if self.pipe is None:
+            self.pipe = subprocess.Popen(
+                ["ffmpeg", "-loglevel", "error", "-ss", f"{self.start:.3f}", "-i", self.path,
+                 "-t", f"{dur * self.speed + 1:.3f}", "-an", "-vf",
+                 f"setpts=(PTS-STARTPTS)/{self.speed},fps={FPS}," + self.vf,
+                 "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
+        buf = self.pipe.stdout.read(W * H * 3)
+        self.next += 1
+        if len(buf) < W * H * 3:  # 区間の終わりを越えたら最後のコマを保つ
+            return self.last
+        self.last = Image.frombytes("RGB", (W, H), buf)
+        if self.next >= round(dur * FPS):
+            self.pipe.stdout.close()
+            self.pipe.wait()
+        return self.last
+
+
 class Shot:
     """写真 1 枚分の静的な層を先に作っておき、毎コマはカメラの切り出しだけ行う。"""
 
@@ -678,10 +713,36 @@ def fx_menu(c, t, sh):
         540, 640 + len(sh["rows"]) * 200 + 20)
 
 
+
+def fx_route(c, t, sh):
+    """道のりの進み具合(上の線)と、いまの目印。目印の札は下から入る。"""
+    top_shade(c, 620, 170)
+    p = sh["p"][0] + (sh["p"][1] - sh["p"][0]) * t / sh["dur"]
+    d = ImageDraw.Draw(c)
+    x0, x1, y = 150, 930, 300
+    if sh.get("bar") is False:  # 映像の中の看板を隠さないカットでは線を出さない
+        x0 = x1 = None
+    if x0 is not None:
+        d.line((x0, y, x1, y), fill=CREAM + (120,), width=6)
+        d.line((x0, y, x0 + (x1 - x0) * p, y), fill=ROSE + (255,), width=8)
+        d.ellipse((x0 + (x1 - x0) * p - 16, y - 16, x0 + (x1 - x0) * p + 16, y + 16), fill=ROSE + (255,))
+    for x, lab in ((x0, sh["ends"][0]), (x1, sh["ends"][1])) if x0 is not None else ():
+        lay = text_layer([lab], 40, color=CREAM, path=F_BODY)
+        put(c, lay, min(max(x, 80 + lay.width / 2), W - 80 - lay.width / 2), y - 55)
+    for i, ln in enumerate(sh.get("text", [])):
+        k = 1.0 if (sh.get("instant") and i == 0) else prog(t, 0.1 + i * 0.25, 0.35)
+        put(c, text_layer([ln], 84 if i == 0 else 64, color=CREAM), 540, 420 + i * 110 + 24 * (1 - out_cubic(k)),
+            alpha=out_cubic(k))
+    if sh.get("tag"):
+        tag = token(sh["tag"], 60, CREAM, INK, 30)
+        k = prog(t, 0.2, 0.35)
+        put(c, tag, 540, 1350 + 80 * (1 - out_cubic(k)), alpha=out_cubic(k))
+
+
 FX = {"hook": fx_hook, "count": fx_count, "wipe": fx_wipe, "cards": fx_cards, "sparkle": fx_sparkle, "cta": fx_cta,
       "lines": fx_lines, "check": fx_check, "ladder": fx_ladder, "bignum": fx_bignum, "reveal": fx_reveal, "qa": fx_qa,
       "slot": fx_slot, "equation": fx_equation, "dish": fx_dish, "grid": fx_grid, "typer": fx_typer, "split": fx_split,
-      "vcap": fx_vcap, "timeline": fx_timeline, "stamp": fx_stamp, "frame": fx_frame, "button": fx_button, "menu": fx_menu}
+      "vcap": fx_vcap, "timeline": fx_timeline, "stamp": fx_stamp, "frame": fx_frame, "button": fx_button, "menu": fx_menu, "route": fx_route}
 
 
 # ---------- 切り替え ----------
@@ -724,7 +785,10 @@ def render(sc, root, times=None):
     total, prev_last = 0.0, None
     for idx, sh in enumerate(sc["shots"]):
         sh = dict(sh, _root=root)
-        shot = Shot(os.path.join(root, sh["img"]), sh.get("layout", "full"), sh.get("cam", "push"))
+        if sh.get("video"):
+            shot = VideoShot(os.path.join(root, sh["video"]), sh["start"], sh.get("speed", 1.0), seq=times is None)
+        else:
+            shot = Shot(os.path.join(root, sh["img"]), sh.get("layout", "full"), sh.get("cam", "push"))
         n = round(sh["dur"] * FPS)
 
         def draw(i):
@@ -767,7 +831,8 @@ def board(sc, root, out):
             d.text((x, y + th + 4), f"{t:.2f}s", font=fn, fill=(90, 90, 90))
         x = 20 + 3 * (tw + 14) + 10
         d.text((x, y), f"{start:.1f}s〜（{sh['dur']}秒）", font=fb, fill=(20, 20, 20))
-        info = [f"写真: {sh['img']}", f"カメラ: {sh.get('cam', 'push')}・{sh.get('layout', 'full')}",
+        src = f"動画: {sh['video']} {sh['start']}s〜 ×{sh.get('speed', 1.0)}" if sh.get("video") else f"写真: {sh['img']}"
+        info = [src, f"カメラ: {sh.get('cam', 'push')}・{sh.get('layout', 'full')}",
                 f"演出: {sh['fx']}" + (f" / 入り: {sh['trans']}" if sh.get("trans") else "")]
         note = sh.get("note", "")
         info += [note[i:i + 20] for i in range(0, len(note), 20)]

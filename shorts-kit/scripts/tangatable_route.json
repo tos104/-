@@ -26,12 +26,12 @@
    "video": "route_raw.mov",
    "start": 6,
    "speed": 12.0,
-   "dur": 4.6,
+   "dur": 2.3,
    "fx": "route",
    "trans": "slide",
    "p": [
     0.08,
-    0.5
+    0.3
    ],
    "ends": [
     "旦過市場",
@@ -45,13 +45,52 @@
   },
   {
    "video": "route_raw.mov",
+   "start": 34,
+   "speed": 12.0,
+   "dur": 2.3,
+   "fx": "route",
+   "trans": "punch",
+   "p": [
+    0.3,
+    0.5
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "text": [
+    "{旦過市場}から",
+    "歩いてすぐ"
+   ],
+   "note": "道のり後半(早送り)。前半と切り替えて変化をつける"
+  },
+  {
+   "video": "route_raw.mov",
    "start": 72.5,
    "speed": 1.5,
-   "dur": 4.4,
+   "dur": 2.0,
    "fx": "route",
    "trans": "punch",
    "p": [
     0.5,
+    0.6
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "tag": "カラフルなエレベーターが目印",
+   "note": "目印1: 黒板の看板からカラフルなエレベーターへ"
+  },
+  {
+   "video": "route_raw.mov",
+   "start": 76.0,
+   "speed": 1.5,
+   "dur": 2.2,
+   "fx": "route",
+   "trans": "punch",
+   "p": [
+    0.6,
     0.7
    ],
    "ends": [
@@ -59,7 +98,7 @@
     "TangaTable"
    ],
    "tag": "カラフルなエレベーターが目印",
-   "note": "目印: 店の投稿(2025-06-16)「カラフルなエレベーターがタンガテーブルの目印」"
+   "note": "目印2: カラフルなエレベーター(店の投稿の表現)"
   },
   {
    "video": "route_raw.mov",
@@ -83,7 +122,7 @@
    "video": "route_raw.mov",
    "start": 102,
    "speed": 2.0,
-   "dur": 3.2,
+   "dur": 1.6,
    "fx": "route",
    "trans": "fade",
    "p": [
@@ -100,14 +139,33 @@
   },
   {
    "video": "route_raw.mov",
+   "start": 105.5,
+   "speed": 2.0,
+   "dur": 1.6,
+   "fx": "route",
+   "trans": "punch",
+   "p": [
+    0.78,
+    0.9
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "note": "扉が開く直前まで",
+   "tag": "4階で扉が開いたら到着",
+   "bar": false
+  },
+  {
+   "video": "route_raw.mov",
    "start": 116,
    "speed": 2.5,
-   "dur": 4.0,
+   "dur": 2.0,
    "fx": "route",
    "trans": "fade",
    "p": [
     0.9,
-    1.0
+    0.95
    ],
    "ends": [
     "旦過市場",
@@ -118,9 +176,27 @@
   },
   {
    "video": "route_raw.mov",
+   "start": 121,
+   "speed": 2.5,
+   "dur": 2.0,
+   "fx": "route",
+   "trans": "punch",
+   "p": [
+    0.95,
+    1.0
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "tag": "着席40名／立食80名の会場",
+   "note": "会場の奥へ"
+  },
+  {
+   "video": "route_raw.mov",
    "start": 126,
    "speed": 1.0,
-   "dur": 4.5,
+   "dur": 3.8,
    "fx": "stamp",
    "trans": "fade",
    "stamp": [
@@ -132,7 +208,9 @@
     "ご予約はDM・メール・お電話で",
     "この動画を参加者に送ってください"
    ],
-   "note": "CTA: 幹事特典と予約方法。最後に『この動画を送る』行動を渡す(シェア・保存を狙う)"
+   "note": "CTA: 幹事特典と予約方法。最後に『この動画を送る』行動を渡す(シェア・保存を狙う)",
+   "last_hot": true
   }
- ]
+ ],
+ "sharp": 1.1
 }

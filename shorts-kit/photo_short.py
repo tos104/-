@@ -63,10 +63,11 @@ def cover(img, w, h):
 class VideoShot:
     """動画の一区間を、速さを変えて全面に敷く。書き出しは順に読み、絵コンテは 1 コマずつ取り出す。"""
 
-    def __init__(self, path, start, speed, seq=True):
+    def __init__(self, path, start, speed, seq=True, sharp=0.6):
         self.path, self.start, self.speed, self.pipe, self.next, self.seq = path, start, speed, None, 0, seq
-        self.vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,crop={W}:{H},"
-                   f"unsharp=5:5:0.6")
+        # 低い解像度の素材は、先に細かいノイズを均してから拡大し、輪郭だけを立てる(ノイズまで強調しないため)
+        self.vf = (f"hqdn3d=1.5:1.5:3:3,scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,"
+                   f"crop={W}:{H},unsharp=7:7:{sharp}:5:5:0.0")
 
     def _one(self, t):
         out = subprocess.run(["ffmpeg", "-loglevel", "error", "-ss", f"{self.start + t * self.speed:.3f}", "-i",
@@ -83,7 +84,8 @@ class VideoShot:
                 ["ffmpeg", "-loglevel", "error", "-ss", f"{self.start:.3f}", "-i", self.path,
                  "-t", f"{dur * self.speed + 1:.3f}", "-an", "-vf",
                  f"setpts=(PTS-STARTPTS)/{self.speed},fps={FPS}," + self.vf,
-                 "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE)
+                 "-frames:v", str(round(dur * FPS)), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"],
+                stdout=subprocess.PIPE)  # 必要なコマ数だけ出させる(読み残しで管が切れないように)
         buf = self.pipe.stdout.read(W * H * 3)
         self.next += 1
         if len(buf) < W * H * 3:  # 区間の終わりを越えたら最後のコマを保つ
@@ -638,7 +640,8 @@ def fx_stamp(c, t, sh):
         ImageDraw.Draw(board).rounded_rectangle((0, 0, W - 121, bot - top - 1), 28, fill=(20, 14, 12, int(190 * a)))
         c.alpha_composite(board, (60, top))
     for i, ln in enumerate(sh["text"]):
-        put(c, text_layer([ln], 70 - i * 6, color=CREAM, path=F_HEAD if i == 0 else F_BODY), 540, 1010 + i * 110,
+        put(c, text_layer([ln], 70 - i * 6, color=ROSE if i == len(sh["text"]) - 1 and sh.get("last_hot") else CREAM,
+                          path=F_HEAD if i == 0 else F_BODY), 540, 1010 + i * 110,
             alpha=out_cubic(prog(t, 0.7 + i * 0.3, 0.3)))
 
 
@@ -716,7 +719,7 @@ def fx_menu(c, t, sh):
 
 def fx_route(c, t, sh):
     """道のりの進み具合(上の線)と、いまの目印。目印の札は下から入る。"""
-    top_shade(c, 620, 170)
+    top_shade(c, 820, 210)
     p = sh["p"][0] + (sh["p"][1] - sh["p"][0]) * t / sh["dur"]
     d = ImageDraw.Draw(c)
     x0, x1, y = 150, 930, 300
@@ -786,7 +789,8 @@ def render(sc, root, times=None):
     for idx, sh in enumerate(sc["shots"]):
         sh = dict(sh, _root=root)
         if sh.get("video"):
-            shot = VideoShot(os.path.join(root, sh["video"]), sh["start"], sh.get("speed", 1.0), seq=times is None)
+            shot = VideoShot(os.path.join(root, sh["video"]), sh["start"], sh.get("speed", 1.0), seq=times is None,
+                             sharp=sc.get("sharp", 0.6))
         else:
             shot = Shot(os.path.join(root, sh["img"]), sh.get("layout", "full"), sh.get("cam", "push"))
         n = round(sh["dur"] * FPS)

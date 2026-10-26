@@ -425,9 +425,44 @@ def board(plan, source, out):
         print(mo, strip.size)
 
 
+ASR_DIR = os.environ.get("SHERPA_MODEL_DIR", "")  # 文字起こしモデル(あれば、詰める区間に言葉が無いかを確かめる)
+_asr = None
+
+
+def word_times(source, a0, a1):
+    """区間内で言葉が始まる時刻(元動画の秒)。モデルが無ければ空。"""
+    global _asr
+    if not ASR_DIR or not os.path.isdir(ASR_DIR):
+        return []
+    import sherpa_onnx
+    if _asr is None:
+        _asr = sherpa_onnx.OfflineRecognizer.from_transducer(
+            encoder=os.path.join(ASR_DIR, "encoder-epoch-99-avg-1.int8.onnx"),
+            decoder=os.path.join(ASR_DIR, "decoder-epoch-99-avg-1.onnx"),
+            joiner=os.path.join(ASR_DIR, "joiner-epoch-99-avg-1.int8.onnx"),
+            tokens=os.path.join(ASR_DIR, "tokens.txt"), num_threads=os.cpu_count() or 2)
+    raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-ss", f"{a0:.3f}", "-t", f"{a1 - a0:.3f}", "-i", source,
+                          "-ac", "1", "-ar", "16000", "-f", "s16le", "-"], check=True, capture_output=True).stdout
+    st = _asr.create_stream()
+    st.accept_waveform(16000, np.frombuffer(raw, np.int16).astype(np.float32) / 32768)
+    _asr.decode_stream(st)
+    return [a0 + t for t in st.result.timestamps]
+
+
 def voice_spans(source, a0, a1):
-    """カットの中の長い間だけを詰める。頭と尻は設計図の位置(語の切れ目)のまま、重なった区間はつなぐ。"""
+    """カットの中の長い間だけを詰める。頭と尻は設計図の位置(語の切れ目)のまま、重なった区間はつなぐ。
+    音の大きさだけで決めると小さい声を削ることがあるので、言葉が始まる時刻を含む間は詰めない。"""
     spans = sorted(rs.speech_spans(source, a0, a1))
+    words = word_times(source, a0, a1)
+    if spans:
+        keep = [spans[0]]
+        for x, y in spans[1:]:
+            gap0, gap1 = keep[-1][1], x
+            if gap1 - gap0 < 0.4 or any(gap0 - 0.05 <= w <= gap1 + 0.02 for w in words):
+                keep[-1] = (keep[-1][0], y)  # 短い間・言葉のある間はつなぐ(語の端を欠かない)
+            else:
+                keep.append((x, y))
+        spans = keep
     merged = []
     for x, y in spans:
         if merged and x <= merged[-1][1] + 0.02:

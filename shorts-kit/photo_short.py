@@ -269,7 +269,8 @@ def fx_cta(c, t, sh):
         d.arc((cx - r, cy - r, cx + r, cy + r), -90, -90 + 360 * out_cubic(k), fill=ACCENT + (255,), width=10)
         d.ellipse((cx - r + 14, cy - r + 14, cx + r - 14, cy + r - 14), fill=CREAM + (int(255 * out_cubic(k)),))
         put(c, text_layer([sh["ring"]], 44, color=INK, shadow=False), cx, cy, alpha=out_cubic(prog(t, 0.8, 0.3)))
-    put(c, text_layer([sh["text"][1]], 64, color=CREAM, path=F_BODY), 650, 520, alpha=out_cubic(prog(t, 0.9, 0.35)))
+    lay = text_layer([sh["text"][1]], 64, color=CREAM, path=F_BODY, maxw=W - 80 - (cx + r + 20))
+    put(c, lay, cx + r + 10 + lay.width / 2, 520, alpha=out_cubic(prog(t, 0.9, 0.35)))  # 丸の右から並べる
 
 
 def paper(_cache=[]):
@@ -471,9 +472,9 @@ def fx_dish(c, t, sh):
     tag = token(sh["name"], 70, CREAM, INK, 34)
     k = prog(t, 0.1, 0.35)
     c.alpha_composite(tag, (round(-tag.width + (tag.width + 80) * out_cubic(k)), 300))
-    if sh.get("sub"):
-        put(c, text_layer([sh["sub"]], 50, color=CREAM, path=F_BODY), 80 + 260, 300 + tag.height + 50,
-            alpha=out_cubic(prog(t, 0.4, 0.3)))
+    if sh.get("sub"):  # 明るい料理の上でも読めるよう、暗い札にのせる
+        sub = token(sh["sub"], 46, (35, 26, 22), CREAM, 22)
+        put(c, sub, 80 + sub.width / 2, 300 + tag.height + 50, alpha=out_cubic(prog(t, 0.4, 0.3)))
 
 
 def person(size, col):
@@ -595,6 +596,12 @@ def fx_stamp(c, t, sh):
             d.text((260 - f.getlength(ln) / 2, 160 + j * 110), ln, font=f, fill=ROSE)
         st = st.rotate(-12, Image.BICUBIC)
         put(c, st, 540, 640, alpha=min(1, k * 3), scale=1.7 - 0.7 * out_back(k, 1.0))
+    a = out_cubic(prog(t, 0.6, 0.3))
+    if a > 0:  # 文字の下に暗い板(写真がにぎやかでも読めるように)
+        top, bot = 950, 1010 + (len(sh["text"]) - 1) * 110 + 70
+        board = Image.new("RGBA", (W - 120, bot - top), (0, 0, 0, 0))
+        ImageDraw.Draw(board).rounded_rectangle((0, 0, W - 121, bot - top - 1), 28, fill=(20, 14, 12, int(190 * a)))
+        c.alpha_composite(board, (60, top))
     for i, ln in enumerate(sh["text"]):
         put(c, text_layer([ln], 70 - i * 6, color=CREAM, path=F_HEAD if i == 0 else F_BODY), 540, 1010 + i * 110,
             alpha=out_cubic(prog(t, 0.7 + i * 0.3, 0.3)))
@@ -651,10 +658,30 @@ def grain(c, seed):
     c.alpha_composite(Image.merge("RGBA", (a, a, a, Image.new("L", (W, H), 22))))
 
 
+
+def fx_menu(c, t, sh):
+    """コースの一覧表(紙の上)。行が 1 本ずつ左から入り、最後に注記。"""
+    c.alpha_composite(paper())
+    put(c, text_layer([sh["title"]], 70, color=INK, shadow=False), 540, 320, alpha=out_cubic(prog(t, 0, 0.3)))
+    d = ImageDraw.Draw(c)
+    for i, (price, body) in enumerate(sh["rows"]):
+        y, k = 520 + i * 200, out_cubic(prog(t, 0.25 + i * 0.3, 0.35))
+        if k <= 0:
+            continue
+        dx = round(-120 * (1 - k))
+        d.line((110, y + 95, 970, y + 95), fill=INK + (int(80 * k),), width=2)
+        p = text_layer([price], 96, color=ACCENT, shadow=False)
+        b = text_layer([body], 64, color=INK, shadow=False)
+        put(c, p, 110 + dx + p.width / 2 - 20, y + 20, alpha=k)
+        put(c, b, 970 + dx - b.width / 2 + 20, y + 30, alpha=k)
+    put(c, wipe(text_layer([sh["foot"]], 56, color=INK, hot=ACCENT, path=F_BODY, shadow=False), prog(t, 1.3, 0.4)),
+        540, 520 + len(sh["rows"]) * 200 + 20)
+
+
 FX = {"hook": fx_hook, "count": fx_count, "wipe": fx_wipe, "cards": fx_cards, "sparkle": fx_sparkle, "cta": fx_cta,
       "lines": fx_lines, "check": fx_check, "ladder": fx_ladder, "bignum": fx_bignum, "reveal": fx_reveal, "qa": fx_qa,
       "slot": fx_slot, "equation": fx_equation, "dish": fx_dish, "grid": fx_grid, "typer": fx_typer, "split": fx_split,
-      "vcap": fx_vcap, "timeline": fx_timeline, "stamp": fx_stamp, "frame": fx_frame, "button": fx_button}
+      "vcap": fx_vcap, "timeline": fx_timeline, "stamp": fx_stamp, "frame": fx_frame, "button": fx_button, "menu": fx_menu}
 
 
 # ---------- 切り替え ----------

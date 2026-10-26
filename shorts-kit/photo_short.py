@@ -161,14 +161,14 @@ def fx_hook(c, t, sh):
         k = prog(t, 0.05 + i * 0.07, 0.25)
         if k <= 0:
             break
-        dx, dy = (30, -10) if ch in "、。" else (0, 0)  # 縦書きの句読点は右上へ
+        dx, dy = (52, -58) if ch in "、。" else (0, 0)  # 縦書きの句読点は右上へ(横書き用の字形は左下にあるため)
         put(c, text_layer([ch], 86, gap=0), x + dx, y + i * 96 + dy + 18 * (1 - out_cubic(k)), alpha=out_cubic(k))
     k = prog(t, 0.65, 0.35)
     lay = text_layer([sh["horizontal"]], 104, color=CREAM, hot=CREAM)
-    put(c, lay, 470, 1010, alpha=out_cubic(k), scale=1.12 - 0.12 * out_back(k))
+    put(c, lay, 540, 1010, alpha=out_cubic(k), scale=1.12 - 0.12 * out_back(k))
     k2 = prog(t, 0.85, 0.4)  # 下線を引く
     if k2 > 0:
-        x0 = 470 - lay.width / 2 + 30
+        x0 = 540 - lay.width / 2 + 30
         ImageDraw.Draw(c).line((x0, 1085, x0 + (lay.width - 60) * out_cubic(k2), 1085), fill=CREAM + (230,), width=4)
 
 
@@ -256,13 +256,13 @@ def fx_cta(c, t, sh):
     top_shade(c, 720, 160)
     put(c, text_layer([sh["text"][0]], 88, color=CREAM), 540, 300, alpha=out_cubic(prog(t, 0.05, 0.35)))
     k = prog(t, 0.45, 0.6)
-    cx, cy, r = 250, 520, 78
+    cx, cy, r = 220, 520, 78
     if k > 0:
         d = ImageDraw.Draw(c)
         d.arc((cx - r, cy - r, cx + r, cy + r), -90, -90 + 360 * out_cubic(k), fill=ACCENT + (255,), width=10)
         d.ellipse((cx - r + 14, cy - r + 14, cx + r - 14, cy + r - 14), fill=CREAM + (int(255 * out_cubic(k)),))
         put(c, text_layer([sh["ring"]], 44, color=INK, shadow=False), cx, cy, alpha=out_cubic(prog(t, 0.8, 0.3)))
-    put(c, text_layer([sh["text"][1]], 64, color=CREAM, path=F_BODY), 610, 520, alpha=out_cubic(prog(t, 0.9, 0.35)))
+    put(c, text_layer([sh["text"][1]], 64, color=CREAM, path=F_BODY), 650, 520, alpha=out_cubic(prog(t, 0.9, 0.35)))
 
 
 FX = {"hook": fx_hook, "count": fx_count, "wipe": fx_wipe, "cards": fx_cards, "sparkle": fx_sparkle, "cta": fx_cta}

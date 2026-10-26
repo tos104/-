@@ -283,10 +283,10 @@ def paper(_cache=[]):
 
 
 def fx_lines(c, t, sh):
-    """行ごとに下から。sparkle の光なし版。"""
-    top_shade(c, 720, sh.get("shade", 150))
+    """行ごとに下から。sparkle の光なし版。instant なら 1 行目は 0 フレーム目から出す(冒頭用)。"""
+    top_shade(c, sh.get("shade_h", 720), sh.get("shade", 150))
     for i, ln in enumerate(sh["text"]):
-        k = prog(t, 0.1 + i * 0.3, 0.4)
+        k = 1.0 if (i == 0 and sh.get("instant")) else prog(t, 0.1 + i * 0.3, 0.4)
         put(c, text_layer([ln], sh.get("size", 92), color=CREAM), 540, 340 + i * 130 + 30 * (1 - out_cubic(k)),
             alpha=out_cubic(k))
 
@@ -662,10 +662,10 @@ def grain(c, seed):
 def fx_menu(c, t, sh):
     """コースの一覧表(紙の上)。行が 1 本ずつ左から入り、最後に注記。"""
     c.alpha_composite(paper())
-    put(c, text_layer([sh["title"]], 70, color=INK, shadow=False), 540, 320, alpha=out_cubic(prog(t, 0, 0.3)))
+    put(c, text_layer([sh["title"]], 70, color=INK, shadow=False), 540, 440, alpha=out_cubic(prog(t, 0, 0.3)))
     d = ImageDraw.Draw(c)
     for i, (price, body) in enumerate(sh["rows"]):
-        y, k = 520 + i * 200, out_cubic(prog(t, 0.25 + i * 0.3, 0.35))
+        y, k = 640 + i * 200, out_cubic(prog(t, 0.25 + i * 0.3, 0.35))
         if k <= 0:
             continue
         dx = round(-120 * (1 - k))
@@ -675,7 +675,7 @@ def fx_menu(c, t, sh):
         put(c, p, 110 + dx + p.width / 2 - 20, y + 20, alpha=k)
         put(c, b, 970 + dx - b.width / 2 + 20, y + 30, alpha=k)
     put(c, wipe(text_layer([sh["foot"]], 56, color=INK, hot=ACCENT, path=F_BODY, shadow=False), prog(t, 1.3, 0.4)),
-        540, 520 + len(sh["rows"]) * 200 + 20)
+        540, 640 + len(sh["rows"]) * 200 + 20)
 
 
 FX = {"hook": fx_hook, "count": fx_count, "wipe": fx_wipe, "cards": fx_cards, "sparkle": fx_sparkle, "cta": fx_cta,

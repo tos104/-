@@ -1,0 +1,59 @@
+{
+ "assets": "../../output/tangatable/assets",
+ "shots": [
+  {
+   "img": "2025-12-17_01.jpg",
+   "dur": 2.6,
+   "cam": "pullback",
+   "fx": "lines",
+   "instant": true,
+   "text": [
+    "忘年会のあと、",
+    "{そのまま泊まれる}"
+   ],
+   "note": "HOOK: 宴会と宿泊が同じ建物(要確認: 当日の部屋の確保)"
+  },
+  {
+   "img": "2026-05-10_03.jpg",
+   "dur": 2.2,
+   "cam": "push",
+   "fx": "lines",
+   "trans": "whip",
+   "text": [
+    "同じビルに",
+    "{ドミトリー}"
+   ],
+   "note": "ドミトリーの写真"
+  },
+  {
+   "img": "2026-05-10_04.jpg",
+   "dur": 2.2,
+   "cam": "push",
+   "fx": "lines",
+   "trans": "whip",
+   "text": [
+    "終電を",
+    "{気にしない}"
+   ],
+   "note": "コピー。事実の主張ではない"
+  },
+  {
+   "img": "2026-04-19_03.jpg",
+   "dur": 3.4,
+   "layout": "band",
+   "cam": "push",
+   "fx": "stamp",
+   "trans": "fade",
+   "stamp": [
+    "幹事",
+    "1名無料"
+   ],
+   "text": [
+    "10名以上のご予約で",
+    "宴会はDM・メール・お電話で",
+    "宿泊は公式HPから"
+   ],
+   "note": "CTA: 宿泊料金は確認中のため出さない"
+  }
+ ]
+}

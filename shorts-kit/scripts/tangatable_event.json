@@ -1,0 +1,58 @@
+{
+ "assets": "../../output/tangatable/assets",
+ "shots": [
+  {
+   "video": "2026-04-13_02.mp4",
+   "start": 0,
+   "speed": 1.5,
+   "dur": 3.0,
+   "fx": "lines",
+   "instant": true,
+   "shade": 200,
+   "text": [
+    "{貸切}で、",
+    "こんな夜も"
+   ],
+   "note": "HOOK: APÉRO(4/4)の会場。参加者は後ろ姿中心(要: 許可確認)"
+  },
+  {
+   "video": "2026-04-12_02.mp4",
+   "start": 2,
+   "speed": 2.0,
+   "dur": 3.0,
+   "fx": "lines",
+   "trans": "slide",
+   "text": [
+    "コラボイベントも"
+   ],
+   "note": "@guesthouse_maru とのコラボ(4/11)。顔が映るため要許可"
+  },
+  {
+   "img": "2026-01-09_01.jpg",
+   "dur": 2.4,
+   "layout": "band",
+   "cam": "push",
+   "fx": "lines",
+   "trans": "slide",
+   "text": [
+    "講演会のあと、",
+    "{同じ会場で懇親会}も"
+   ],
+   "note": "店の投稿(2025-09-09)"
+  },
+  {
+   "img": "2026-04-19_01.jpg",
+   "dur": 3.2,
+   "layout": "band",
+   "cam": "push",
+   "fx": "button",
+   "trans": "fade",
+   "text": [
+    "着席40名・立食80名",
+    "貸切は7日前までにご相談を"
+   ],
+   "button": "DM・メール・お電話で",
+   "note": "CTA"
+  }
+ ]
+}

@@ -1,0 +1,70 @@
+{
+ "assets": "../../output/tangatable/assets",
+ "shots": [
+  {
+   "video": "2026-05-24_01.mp4",
+   "start": 0,
+   "speed": 1.5,
+   "dur": 3.0,
+   "fx": "lines",
+   "instant": true,
+   "shade_h": 900,
+   "shade": 220,
+   "text": [
+    "{旦過市場}の",
+    "すぐ隣に泊まる"
+   ],
+   "note": "HOOK: 客室からの景色(店の投稿「客室から見た景色」「旦過市場のすぐ隣にあるゲストハウス」)"
+  },
+  {
+   "video": "2026-02-15_02.mp4",
+   "start": 0,
+   "speed": 2.0,
+   "dur": 3.0,
+   "fx": "lines",
+   "trans": "slide",
+   "text": [
+    "ドミトリー"
+   ],
+   "note": "部屋をめぐる(客室紹介の動画)"
+  },
+  {
+   "video": "2026-02-15_02.mp4",
+   "start": 10,
+   "speed": 2.0,
+   "dur": 3.0,
+   "fx": "lines",
+   "trans": "punch",
+   "text": [
+    "ベッドごとに{カーテン}"
+   ],
+   "note": "ベッドの様子。文言は映像に映るものだけ"
+  },
+  {
+   "video": "2026-02-15_02.mp4",
+   "start": 28,
+   "speed": 1.5,
+   "dur": 3.0,
+   "fx": "lines",
+   "trans": "slide",
+   "text": [
+    "窓の外は",
+    "{旦過市場}"
+   ],
+   "note": "部屋の窓から市場が見える"
+  },
+  {
+   "img": "2026-05-10_04.jpg",
+   "dur": 3.0,
+   "cam": "push",
+   "fx": "button",
+   "trans": "fade",
+   "text": [
+    "ご宿泊のご予約は",
+    "ドミトリー・個室あり"
+   ],
+   "button": "公式HPで予約",
+   "note": "CTA: 店の投稿(10/23)「タンガテーブルのHPから会員価格が最安値」"
+  }
+ ]
+}

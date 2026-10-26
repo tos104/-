@@ -1,0 +1,30 @@
+{
+ "assets": "../../output/tangatable/assets",
+ "shots": [
+  {
+   "img": "2026-04-19_03.jpg",
+   "dur": 3.0,
+   "layout": "band",
+   "cam": "push",
+   "fx": "lines",
+   "text": [
+    "年末年始の営業",
+    "{〇月〇日〜〇月〇日} お休み"
+   ],
+   "note": "要情報: 営業日が決まったら◯を埋める(今は仮)"
+  },
+  {
+   "img": "2026-04-19_01.jpg",
+   "dur": 3.0,
+   "layout": "band",
+   "cam": "push",
+   "fx": "lines",
+   "trans": "fade",
+   "text": [
+    "新年会のご予約",
+    "受付中"
+   ],
+   "note": "新年会へつなぐ"
+  }
+ ]
+}

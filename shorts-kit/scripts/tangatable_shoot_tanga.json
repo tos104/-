@@ -1,0 +1,87 @@
+{
+ "assets": "../../output/tangatable/assets",
+ "shots": [
+  {
+   "video": "route_raw.mov",
+   "start": 0,
+   "speed": 2.0,
+   "dur": 3.0,
+   "fx": "route",
+   "instant": true,
+   "p": [
+    0.0,
+    0.08
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "text": [
+    "{新しい旦過市場}から",
+    "タンガテーブルへ"
+   ],
+   "note": "仮: オープン当日に撮り直す。今は既存の道案内の映像で代用"
+  },
+  {
+   "video": "route_raw.mov",
+   "start": 6,
+   "speed": 12.0,
+   "dur": 2.3,
+   "fx": "route",
+   "trans": "slide",
+   "p": [
+    0.08,
+    0.3
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "text": [
+    "{旦過市場}から",
+    "歩いてすぐ"
+   ],
+   "note": "道のりを早送りで。文言はプロフィールの表現どおり"
+  },
+  {
+   "video": "route_raw.mov",
+   "start": 34,
+   "speed": 12.0,
+   "dur": 2.3,
+   "fx": "route",
+   "trans": "punch",
+   "p": [
+    0.3,
+    0.5
+   ],
+   "ends": [
+    "旦過市場",
+    "TangaTable"
+   ],
+   "text": [
+    "{旦過市場}から",
+    "歩いてすぐ"
+   ],
+   "note": "道のり後半(早送り)。前半と切り替えて変化をつける"
+  },
+  {
+   "video": "route_raw.mov",
+   "start": 126,
+   "speed": 1.0,
+   "dur": 3.8,
+   "fx": "stamp",
+   "trans": "fade",
+   "stamp": [
+    "幹事",
+    "1名無料"
+   ],
+   "text": [
+    "10名以上のご予約で",
+    "ご予約はDM・メール・お電話で",
+    "この動画を参加者に送ってください"
+   ],
+   "note": "CTA: 幹事特典と予約方法。最後に『この動画を送る』行動を渡す(シェア・保存を狙う)",
+   "last_hot": true
+  }
+ ]
+}

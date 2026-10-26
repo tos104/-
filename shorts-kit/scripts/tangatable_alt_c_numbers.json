@@ -1,0 +1,80 @@
+{
+ "assets": "../../output/tangatable/assets",
+ "shots": [
+  {
+   "img": "2025-12-17_01.jpg",
+   "dur": 1.8,
+   "cam": "pullback",
+   "fx": "lines",
+   "text": [
+    "小倉の忘年会を",
+    "{4つの数字}で"
+   ],
+   "note": "HOOK: 数字で見せると宣言し、数を数えさせる"
+  },
+  {
+   "img": "2025-12-17_01.jpg",
+   "dur": 2.0,
+   "cam": "push",
+   "fx": "bignum",
+   "trans": "whip",
+   "label": "立食",
+   "num": "80",
+   "unit": "名まで",
+   "sub": "着席なら50名",
+   "note": "NUM1: 満席の写真の上で人数"
+  },
+  {
+   "img": "2026-06-03_01.jpg",
+   "dur": 2.2,
+   "cam": "push",
+   "fx": "bignum",
+   "trans": "whip",
+   "label": "税込",
+   "num": "4,400",
+   "unit": "円〜",
+   "sub": "4品＋90分飲み放題",
+   "size": 260,
+   "note": "NUM2: 料理の上で予算"
+  },
+  {
+   "img": "2025-09-22_03.jpg",
+   "dur": 2.0,
+   "cam": "push",
+   "fx": "bignum",
+   "trans": "whip",
+   "label": "飲み放題",
+   "num": "90",
+   "unit": "分",
+   "sub": "全コースについています",
+   "note": "NUM3: 乾杯の上で飲み放題"
+  },
+  {
+   "img": "2026-01-09_01.jpg",
+   "dur": 2.6,
+   "layout": "band",
+   "cam": "push",
+   "fx": "bignum",
+   "trans": "whip",
+   "label": "締切",
+   "num": "3",
+   "unit": "日前",
+   "sub": "コースはご利用日の3日前まで",
+   "note": "NUM4: 締切で今すぐ動く理由を作る"
+  },
+  {
+   "img": "2026-04-19_03.jpg",
+   "dur": 3.0,
+   "layout": "band",
+   "cam": "push",
+   "fx": "cta",
+   "trans": "flash",
+   "text": [
+    "忘年会・新年会 予約受付中",
+    "ハイライトから予約"
+   ],
+   "ring": "予約",
+   "note": "CTA: 予約の場所を渡して終える"
+  }
+ ]
+}

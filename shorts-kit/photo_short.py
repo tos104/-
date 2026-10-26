@@ -106,7 +106,7 @@ def text_layer(lines, size, color=WHITE, hot=ROSE, path=F_HEAD, shadow=True, gap
     """複数行の文字(RGBA)。{} は強調色。影は柔らかく 1 枚だけ。"""
     f = font(path, size)
     widths = [sum(f.getlength(t) for t, _ in segments(ln)) for ln in lines]
-    lw, lh = int(max(widths)) + 40, len(lines) * (size + gap) + 40
+    lw, lh = int(max(widths)) + 40, len(lines) * (size + gap) + 40 + size // 4  # 読点などの下に出る部分を切らない
     im = Image.new("RGBA", (lw, lh), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     for i, ln in enumerate(lines):
@@ -254,7 +254,10 @@ def fx_sparkle(c, t, sh):
 def fx_cta(c, t, sh):
     """締切を出し、予約のハイライトの丸を描いて終える。"""
     top_shade(c, 720, 160)
-    put(c, text_layer([sh["text"][0]], 88, color=CREAM), 540, 300, alpha=out_cubic(prog(t, 0.05, 0.35)))
+    size = 88
+    while font(F_HEAD, size).getlength(re.sub(r"[{}]", "", sh["text"][0])) > W - 200:  # 安全域に収める
+        size -= 4
+    put(c, text_layer([sh["text"][0]], size, color=CREAM), 540, 300, alpha=out_cubic(prog(t, 0.05, 0.35)))
     k = prog(t, 0.45, 0.6)
     cx, cy, r = 220, 520, 78
     if k > 0:
@@ -265,7 +268,137 @@ def fx_cta(c, t, sh):
     put(c, text_layer([sh["text"][1]], 64, color=CREAM, path=F_BODY), 650, 520, alpha=out_cubic(prog(t, 0.9, 0.35)))
 
 
-FX = {"hook": fx_hook, "count": fx_count, "wipe": fx_wipe, "cards": fx_cards, "sparkle": fx_sparkle, "cta": fx_cta}
+def paper(_cache=[]):
+    """クリームの紙(粒は固定の乱数)。"""
+    if not _cache:
+        rng = np.random.default_rng(7)
+        a = np.clip(np.array(CREAM, np.float32) + rng.normal(0, 4, (H, W, 1)), 0, 255).astype(np.uint8)
+        _cache.append(Image.fromarray(a).convert("RGBA"))
+    return _cache[0]
+
+
+def fx_lines(c, t, sh):
+    """行ごとに下から。sparkle の光なし版。"""
+    top_shade(c, 720, 150)
+    for i, ln in enumerate(sh["text"]):
+        k = prog(t, 0.1 + i * 0.3, 0.4)
+        put(c, text_layer([ln], sh.get("size", 92), color=CREAM), 540, 340 + i * 130 + 30 * (1 - out_cubic(k)),
+            alpha=out_cubic(k))
+
+
+def fx_check(c, t, sh):
+    """幹事のチェック項目。枠を出してからレ点を書く。"""
+    dark = Image.new("RGBA", (W, H), (20, 14, 12, 0))
+    dark.putalpha(int(170 * out_cubic(prog(t, 0, 0.3))))
+    c.alpha_composite(dark)
+    put(c, text_layer([sh["title"]], 76, color=CREAM), 540, 300, alpha=out_cubic(prog(t, 0, 0.3)))
+    d = ImageDraw.Draw(c)
+    for i, (label, value) in enumerate(sh["items"]):
+        y, t0 = 470 + i * 230, 0.35 + i * sh.get("step", 0.55)
+        k = prog(t, t0, 0.25)
+        if k <= 0:
+            continue
+        a = int(255 * out_cubic(k))
+        d.rounded_rectangle((110, y, 170, y + 60), 8, outline=CREAM + (a,), width=4)
+        kc = prog(t, t0 + 0.15, 0.25)  # レ点は 2 画で書く
+        if kc > 0:
+            p1, p2, p3 = (122, y + 30), (138, y + 48), (178, y - 2)
+            m = min(1, kc * 2)
+            d.line((p1, (p1[0] + (p2[0] - p1[0]) * m, p1[1] + (p2[1] - p1[1]) * m)), fill=ROSE + (255,), width=9)
+            if kc > 0.5:
+                m = (kc - 0.5) * 2
+                d.line((p2, (p2[0] + (p3[0] - p2[0]) * m, p2[1] + (p3[1] - p2[1]) * m)), fill=ROSE + (255,), width=9)
+        lab = text_layer([label], 52, color=CREAM, path=F_BODY, shadow=False)
+        c.alpha_composite(lab, (200, y - 12)) if k >= 1 else put(c, lab, 200 + lab.width / 2, y + lab.height / 2 - 12, alpha=k)
+        val = text_layer([value], 64, color=CREAM, shadow=False)
+        put(c, wipe(val, prog(t, t0 + 0.2, 0.35)), 200 + val.width / 2, y + 125)
+
+
+def fx_ladder(c, t, sh):
+    """3 つのコースを、品数の棒で比べる(紙の上)。"""
+    c.alpha_composite(paper())
+    put(c, text_layer([sh["title"]], 80, color=INK, shadow=False), 540, 300, alpha=out_cubic(prog(t, 0, 0.3)))
+    d = ImageDraw.Draw(c)
+    base, unit = 1460, 100
+    for i, (price, n) in enumerate(sh["courses"]):
+        x, t0 = 220 + i * 320, 0.3 + i * 0.35
+        k = out_back(prog(t, t0, 0.45), 1.2)
+        top = base - n * unit * k
+        if k > 0:
+            col = ACCENT if i == len(sh["courses"]) - 1 else (120, 92, 80)
+            d.rectangle((x - 105, top, x + 105, base), fill=col + (255,))
+            put(c, text_layer([f"{n}品"], 56, color=CREAM, shadow=False), x, top + 50, alpha=prog(t, t0 + 0.3, 0.2))
+            put(c, text_layer([price], 58, color=INK, shadow=False), x, top - 50, alpha=prog(t, t0 + 0.2, 0.2))
+    d.line((90, base, 990, base), fill=INK + (255,), width=3)
+    put(c, wipe(text_layer([sh["foot"]], 60, color=INK, hot=ACCENT, shadow=False), prog(t, 1.4, 0.4)), 540, 1530)
+
+
+def fx_bignum(c, t, sh):
+    """数字 1 つだけを左寄せで大きく。下から切り出すように出す。"""
+    dark = Image.new("RGBA", (W, H), (15, 10, 8, 150))
+    c.alpha_composite(dark)
+    lab = text_layer([sh["label"]], 60, color=CREAM, path=F_BODY)
+    put(c, lab, 110 + lab.width / 2, 520, alpha=out_cubic(prog(t, 0, 0.25)))
+    num = text_layer([sh["num"]], sh.get("size", 330), color=CREAM, hot=ROSE)
+    k = prog(t, 0.1, 0.35)
+    m = Image.new("L", num.size, 0)  # 下から上へマスクを開ける
+    ImageDraw.Draw(m).rectangle((0, round(num.height * (1 - out_cubic(k))), num.width, num.height), fill=255)
+    lay = num.copy()
+    lay.putalpha(Image.composite(num.getchannel("A"), m, m))
+    c.alpha_composite(lay, (90, 560 + round(40 * (1 - out_cubic(k)))))
+    unit = text_layer([sh["unit"]], 88, color=CREAM)
+    put(c, unit, 90 + num.width - 10 + unit.width / 2, 560 + num.height - 110,
+        alpha=out_cubic(prog(t, 0.4, 0.25)))
+    if sh.get("sub"):
+        put(c, wipe(text_layer([sh["sub"]], 64, color=CREAM), prog(t, 0.55, 0.4)), 540, 560 + num.height + 90)
+
+
+def fx_reveal(c, t, sh, cache={}):
+    """無人の会場から、満席の会場へ。縦の線が左から右へ動いて入れ替える。"""
+    if id(sh) not in cache:
+        cache[id(sh)] = Shot(os.path.join(sh["_root"], sh["img2"]), sh.get("layout2", "full"), "push")
+    k = out_cubic(prog(t, sh.get("at", 0.9), 0.9))
+    if k > 0:
+        x = round(W * k)
+        after = cache[id(sh)].frame(t, sh["dur"]).convert("RGBA")
+        c.alpha_composite(after.crop((0, 0, x, H)), (0, 0))
+        if k < 1:
+            ImageDraw.Draw(c).line((x, 0, x, H), fill=CREAM + (255,), width=6)
+    top_shade(c, 720, 150)
+    for i, ln in enumerate(sh["text"]):
+        kk = prog(t, sh["text_at"][i], 0.4)
+        put(c, text_layer([ln], 88, color=CREAM), 540, 330 + i * 130 + 24 * (1 - out_cubic(kk)), alpha=out_cubic(kk))
+
+
+def bubble(text, fill, ink, tail_right):
+    f = font(F_HEAD, 64)
+    w, h = round(f.getlength(text)) + 90, 130
+    im = Image.new("RGBA", (w, h + 30), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((0, 0, w - 1, h), 50, fill=fill + (245,))
+    tx = w - 70 if tail_right else 50
+    d.polygon([(tx, h - 5), (tx + 20, h - 5), (tx + (30 if tail_right else -10), h + 28)], fill=fill + (245,))
+    d.text((45, 28), text, font=f, fill=ink)
+    return im
+
+
+def fx_qa(c, t, sh):
+    """幹事の質問(左)と店の答え(右)を、吹き出しで弾ませて出す。"""
+    top_shade(c, 1000, 170)
+    q = bubble(sh["q"], CREAM, INK, False)
+    a = bubble(sh["a"], ACCENT, CREAM, True)
+    kq, ka = prog(t, 0.1, 0.35), prog(t, 0.75, 0.35)
+    if kq > 0:
+        put(c, q, 80 + q.width / 2, 330, alpha=min(1, kq * 3), scale=0.6 + 0.4 * out_back(kq))
+    if ka > 0:
+        put(c, a, W - 80 - a.width / 2, 520, alpha=min(1, ka * 3), scale=0.6 + 0.4 * out_back(ka))
+    if sh.get("sub"):
+        sub = text_layer([sh["sub"]], 52, color=CREAM, path=F_BODY)
+        put(c, sub, W - 80 - sub.width / 2, 660, alpha=out_cubic(prog(t, 1.1, 0.3)))
+
+
+FX = {"hook": fx_hook, "count": fx_count, "wipe": fx_wipe, "cards": fx_cards, "sparkle": fx_sparkle, "cta": fx_cta,
+      "lines": fx_lines, "check": fx_check, "ladder": fx_ladder, "bignum": fx_bignum, "reveal": fx_reveal, "qa": fx_qa}
 
 
 # ---------- 切り替え ----------

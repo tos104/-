@@ -13,7 +13,7 @@
      "crop": [cx, cy, w], "crop_end": [cx, cy, w],   # 位置はボックス基準(x はボックス幅、y はボックス高さを 1 とする)
      "anchor": "2.png",                              # ボックスが写っていない画像は、同じ表示範囲の画像で位置を合わせる
      "label": "見出しの下の役名", "color": "blue|red|ink",
-     "tag": "10/19(月) 16:59", "caption": "下の説明文(\\n で改行)",
+     "tag": "10/19(月) 16:59", "caption": "下の説明文(\\n で改行)", "type": false,   # false で打ち出さず最初から全文
      "badges": [["TP 25.2 pips", "green"], ...],
      "note": "なぜこのカットがあるか"}
   ]
@@ -125,8 +125,9 @@ def frame(sc, charts, i, t):
     cur = [a + (b - a) * k for a, b in zip(crop, end)]
     chart = charts.view(s["img"], cur, s.get("anchor"))
     prev = sc["shots"][i - 1] if i else None
-    if prev and prev["img"] != s["img"] and t < FADE:
-        # 前の画像を同じ位置で切り抜いて溶かす。表示範囲がずれても、ボックスの位置で揃う
+    same_view = prev and prev.get("crop_end", prev["crop"]) == crop
+    if same_view and prev["img"] != s["img"] and t < FADE:
+        # 同じ表示範囲で線が増えるときだけ溶かす(描き足しに見せる)。範囲が変わるときは切り替えて変化をはっきりさせる
         old = charts.view(prev["img"], cur, prev.get("anchor"))
         chart = Image.blend(old, chart, ease(t / FADE))
 
@@ -142,7 +143,7 @@ def frame(sc, charts, i, t):
     cap = s.get("caption", "")
     if cap:
         f = font(F_CAP, 60)
-        n = int(t * TYPE_CPS) + 1
+        n = int(t * TYPE_CPS) + 1 if s.get("type", True) else len(cap)
         for j, line in enumerate(wrap(cap, f, CAP_W)):   # 改行位置は全文で決め、打ち出し中に文字が跳ねないようにする
             d.text((W / 2 - f.getlength(line) / 2, CAP_Y + j * 82), line[:max(0, n)], font=f, fill=INK)
             n -= len(line)

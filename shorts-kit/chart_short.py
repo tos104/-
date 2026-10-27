@@ -26,6 +26,7 @@
      "trans": "wipe",                                # 前のカットから線が増えるとき、左から拭くように現す(既定は溶かす)
      "callouts": [[640, 285, "ボックス", "blue"]],    # 録画の画素の位置に添える短い注記(見本の DEMAND ZONE のように)
      "sub": "役名の下の小さな見出し",
+     "tate": "縦書きの\n大見出し", "tate_side": "right",   # 台本の "layout": "tate" のとき縦書きで出す(既定は左側)
      "markers": [{"type": "dot", "x": 863, "y": 288, "t": 0.2, "color": "red", "text": "買い"},      # 脈打つ点
                  {"type": "arrow", "x": 880, "y": 250, "x2": 896, "y2": 318, "t": 0.9, "color": "red"}],  # 伸びる矢印
      "punch": [1.4]},                                 # その秒にカメラが一瞬寄る(決め手の場面)
@@ -238,6 +239,34 @@ def draw_markers(im, s, t, cur):
     im.paste(layer, (0, 0), layer)
 
 
+TATE_ROT = set("ー－—―～〜…‥()（）「」『』[]［］-=＝")   # 縦書きで 90 度回す文字
+TATE_SMALL = set("、。，．")                              # 縦書きで右上に寄せる文字
+
+
+def draw_tate(im, text, f, fill, n, side="left", y_top=PANEL_Y + 20):
+    """縦書き(右の列から左へ)。n 文字目まで出す。読みやすいよう背景色のふちを付ける。"""
+    size = f.size
+    cols = text.split("\n")
+    pitch_x, pitch_y = size * 1.18, size * 1.04
+    x_left = 96 if side == "left" else W - 96 - len(cols) * pitch_x
+    layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    for c, col in enumerate(cols):
+        x = x_left + (len(cols) - 1 - c) * pitch_x + size / 2
+        for r, ch in enumerate(col.replace("→", "↓")):
+            if n <= 0:
+                break
+            n -= 1
+            y = y_top + r * pitch_y + size / 2
+            tile = Image.new("RGBA", (size * 2, size * 2), (0, 0, 0, 0))
+            ImageDraw.Draw(tile).text((size, size), ch, font=f, anchor="mm", fill=fill + (255,),
+                                      stroke_width=max(4, size // 10), stroke_fill=BG + (255,))
+            if ch in TATE_ROT:
+                tile = tile.rotate(-90)
+            dx, dy = (size * 0.32, -size * 0.32) if ch in TATE_SMALL else (0, 0)
+            layer.alpha_composite(tile, (int(x - size + dx), int(y - size + dy)))
+    im.paste(layer, (0, 0), layer)
+
+
 def poly_part(pts, k):
     """折れ線を全長の k の割合まで返す(線を描いていくアニメーション用)。"""
     seg = [np.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(pts, pts[1:])]
@@ -388,6 +417,12 @@ def frame(sc, charts, i, t):
         d.text((60, PANEL_Y - 56), s["tag"], font=font(F_TAG, 38), fill=(70, 76, 84))
 
     cap = s.get("caption", "")
+    if sc.get("layout") == "tate" and s.get("tate"):
+        tt = s["tate"]
+        n = int(t * sc.get("type_cps", TYPE_CPS)) + 1 if s.get("type", True) else len(tt)
+        draw_tate(im, tt, font(F_HEAD, 104), INK if s.get("color", "blue") != "red" else COLORS["red"], n,
+                  s.get("tate_side", "left"))
+        d = ImageDraw.Draw(im)
     if cap:
         f = font(F_CAP, 60)
         n = int(t * sc.get("type_cps", TYPE_CPS)) + 1 if s.get("type", True) else len(cap)

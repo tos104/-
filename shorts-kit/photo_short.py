@@ -629,8 +629,11 @@ def fx_stamp(c, t, sh):
         d.ellipse((10, 10, 510, 510), outline=ROSE + (255,), width=16)
         d.ellipse((40, 40, 480, 480), outline=ROSE + (255,), width=5)
         f = font(F_HEAD, 92)
-        for j, ln in enumerate(sh["stamp"]):
-            d.text((260 - f.getlength(ln) / 2, 160 + j * 110), ln, font=f, fill=ROSE)
+        boxes = [d.textbbox((0, 0), ln, font=f) for ln in sh["stamp"]]
+        y = 260 - (sum(b[3] - b[1] for b in boxes) + 18 * (len(boxes) - 1)) / 2  # 文字のインクの範囲で丸の中央にそろえる
+        for ln, (x0, y0, x1, y1) in zip(sh["stamp"], boxes):
+            d.text((260 - (x0 + x1) / 2, y - y0), ln, font=f, fill=ROSE)
+            y += y1 - y0 + 18
         st = st.rotate(-12, Image.BICUBIC)
         put(c, st, 540, 640, alpha=min(1, k * 3), scale=1.7 - 0.7 * out_back(k, 1.0))
     a = out_cubic(prog(t, 0.6, 0.3))

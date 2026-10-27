@@ -10,6 +10,7 @@
   "header": "固定の見出し", "footer": "常に出す小さな注記(免責など)",
   "look": "vivid", "fps": 60, "type_cps": 22,      # 省略時は乗算で溶かす v2 の見た目・30fps・16 文字/秒
   "font_head": "MPLUSRounded1c-ExtraBold.ttf", "font_cap": "MPLUSRounded1c-Bold.ttf",   # 省略時は Dela Gothic One / Rounded M+ Black
+  "font_tag": "ShipporiMincho-Medium.ttf",                                               # 小さい文字(注記・役名の下)
   "rec_file": "replay.mov",                         # 画面録画(assets からの相対パス)。録画を素材にするカットで使う
   "shots": [
     {"img": "2.png", "dur": 3.0,
@@ -23,7 +24,12 @@
     {"rec": [33.0, 27.5], "rect": [...], "rect_end": [...], "rec_tag": true,   # 33.0→27.5 秒をカットの長さに合わせて流す(逆向き可)
      "mark": [870, 250],                             # 録画の画素の位置に × 印(見送り例)
      "trans": "wipe",                                # 前のカットから線が増えるとき、左から拭くように現す(既定は溶かす)
-     "callouts": [[640, 285, "ボックス", "blue"]]},   # 録画の画素の位置に添える短い注記(見本の DEMAND ZONE のように)
+     "callouts": [[640, 285, "ボックス", "blue"]],    # 録画の画素の位置に添える短い注記(見本の DEMAND ZONE のように)
+     "sub": "役名の下の小さな見出し",
+     "markers": [{"type": "dot", "x": 863, "y": 288, "t": 0.2, "color": "red", "text": "買い"},      # 脈打つ点
+                 {"type": "arrow", "x": 880, "y": 250, "x2": 896, "y2": 318, "t": 0.9, "color": "red"}],  # 伸びる矢印
+     "punch": [1.4]},                                 # その秒にカメラが一瞬寄る(決め手の場面)
+    {"diagram": "range_pullback_line", "dur": 3.0},  # 模式図(手順の形を線で描く。実際の価格ではない)
     {"card": "免責などの全文", "dur": 2.0}            # チャートなしで文字だけ
   ]
 }
@@ -197,6 +203,100 @@ def end_key(s):
     return ("rec", s["rec"][-1]) if "rec" in s else s.get("img")
 
 
+def to_panel(x, y, cur):
+    cx, cy, pw = cur
+    ph = pw * PANEL_H / W
+    return (x - cx + pw / 2) / pw * W, (y - cy + ph / 2) / ph * PANEL_H + PANEL_Y
+
+
+def draw_markers(im, s, t, cur):
+    layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    for m in s.get("markers", []):
+        p = (t - m["t"]) / 0.3
+        if p <= 0:
+            continue
+        rgb = COLORS[m.get("color", "blue")]
+        x, y = to_panel(m["x"], m["y"], cur)
+        if m["type"] == "dot":
+            r = 13 * ease(p)
+            d.ellipse((x - r, y - r, x + r, y + r), fill=rgb + (255,), outline=(255, 255, 255, 255), width=4)
+            ph = ((t - m["t"]) % 1.2) / 1.2      # 1.2 秒ごとに輪が広がる(視線を止める)
+            rr = 16 + 40 * ph
+            d.ellipse((x - rr, y - rr, x + rr, y + rr), outline=rgb + (int(200 * (1 - ph)),), width=5)
+            if m.get("text"):   # 点の左上に置く(右側は値動きの続きがあるため)
+                d.text((x - 26, y - 34), m["text"], font=font(F_HEAD, 40), anchor="rm", fill=rgb + (int(255 * min(1, p)),),
+                       stroke_width=6, stroke_fill=BG + (255,))
+        elif m["type"] == "arrow":
+            x2, y2 = to_panel(m["x2"], m["y2"], cur)
+            k = ease(p)
+            ex, ey = x + (x2 - x) * k, y + (y2 - y) * k
+            d.line((x, y, ex, ey), fill=rgb + (255,), width=9)
+            ang = np.arctan2(ey - y, ex - x)
+            for da in (2.6, -2.6):
+                d.line((ex, ey, ex + 30 * np.cos(ang + da), ey + 30 * np.sin(ang + da)), fill=rgb + (255,), width=9)
+    im.paste(layer, (0, 0), layer)
+
+
+def poly_part(pts, k):
+    """折れ線を全長の k の割合まで返す(線を描いていくアニメーション用)。"""
+    seg = [np.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(pts, pts[1:])]
+    goal, out = sum(seg) * min(1, max(0, k)), [pts[0]]
+    for (a, b), L in zip(zip(pts, pts[1:]), seg):
+        if goal >= L:
+            out.append(b)
+            goal -= L
+        else:
+            out.append((a[0] + (b[0] - a[0]) * goal / L, a[1] + (b[1] - a[1]) * goal / L))
+            break
+    return out
+
+
+DIAGRAMS = {
+    # レンジ → リボンごと上抜け → 押し目に切り下げライン → 抜けてエントリー → チャネル → 割れて決済(形だけ。価格ではない)
+    "range_pullback_line": {
+        "box": (90, 430, 560, 560),
+        "path": [(60, 520), (130, 450), (190, 540), (260, 455), (330, 545), (400, 450), (470, 535), (560, 420),
+                 (640, 330), (700, 360), (735, 345), (770, 395), (820, 330), (880, 270), (930, 290), (980, 215),
+                 (1020, 225), (1040, 300)],
+        "line": ((650, 300), (840, 420)), "entry": (808, 347),
+        "channel": (((790, 400), (1060, 160)), ((760, 330), (1040, 80))), "exit": (1040, 300),
+    }
+}
+
+
+def draw_diagram(im, name, t, dur):
+    g = DIAGRAMS[name]
+    d = ImageDraw.Draw(im)
+    k = t / max(dur - 0.6, 0.1)
+    oy = PANEL_Y
+    bx0, by0, bx1, by1 = g["box"]
+    bk = ease(k / 0.15)
+    if bk > 0:      # レンジの帯を左から広げる
+        d.rectangle((bx0, oy + by0, bx0 + (bx1 - bx0) * bk, oy + by1), fill=(198, 216, 236), outline=COLORS["blue"], width=5)
+        d.text((bx0 + 12, oy + by0 - 52), "レンジ", font=font(F_HEAD, 40), fill=COLORS["blue"])
+    pts = [(x, oy + y) for x, y in poly_part(g["path"], (k - 0.1) / 0.75)]
+    if len(pts) > 1:
+        d.line(pts, fill=INK, width=8, joint="curve")
+    if k > 0.5:     # 押し目の切り下げライン
+        (x0, y0), (x1, y1) = g["line"]
+        p = ease((k - 0.5) / 0.12)
+        d.line((x0, oy + y0, x0 + (x1 - x0) * p, oy + y0 + (y1 - y0) * p), fill=(90, 90, 96), width=6)
+    if k > 0.62:
+        x, y = g["entry"]
+        r = 16 * ease((k - 0.62) / 0.06)
+        d.ellipse((x - r, oy + y - r, x + r, oy + y + r), fill=COLORS["blue"], outline=(255, 255, 255), width=4)
+        d.text((x - 30, oy + y + 70), "エントリー", font=font(F_HEAD, 38), fill=COLORS["blue"], anchor="rm")
+    if k > 0.72:
+        p = ease((k - 0.72) / 0.12)
+        for (x0, y0), (x1, y1) in g["channel"]:
+            d.line((x0, oy + y0, x0 + (x1 - x0) * p, oy + y0 + (y1 - y0) * p), fill=(90, 90, 96), width=5)
+    if k > 0.95:
+        x, y = g["exit"]
+        d.text((x - 10, oy + y + 40), "決済", font=font(F_HEAD, 40), fill=COLORS["green"], anchor="mm")
+    d.text((W - 40, oy + PANEL_H - 40), "模式図", font=font(F_TAG, 32), fill=(90, 96, 104), anchor="rm")
+
+
 def frame(sc, charts, i, t):
     s = sc["shots"][i]
     dur = s["dur"]
@@ -204,13 +304,18 @@ def frame(sc, charts, i, t):
     k = ease_io(t / dur) if vivid else ease(t / dur)
     im = Image.new("RGB", (W, H), BG)
     head = None
-    if "card" not in s:
+    if s.get("diagram"):
+        draw_diagram(im, s["diagram"], t, dur)
+    elif "card" not in s:
         crop = s.get("crop", s.get("rect"))
         end = s.get("crop_end", s.get("rect_end", crop))
         cur = [a + (b - a) * k for a, b in zip(crop, end)]
+        for tp in s.get("punch", []):     # 決め手の場面で一瞬寄って戻る
+            q = min(1.0, max(0.0, (t - tp) / 0.4))
+            cur[2] *= 1 - 0.07 * np.sin(np.pi * q)
         chart, head = source(sc, charts, s, t, cur)
         prev = sc["shots"][i - 1] if i else None
-        same_view = prev and "card" not in prev and \
+        same_view = prev and "card" not in prev and "diagram" not in prev and \
             prev.get("crop_end", prev.get("rect_end", prev.get("crop", prev.get("rect")))) == crop
         wipe = s.get("trans") == "wipe"
         if same_view and end_key(prev) != start_key(s) and t < (WIPE if wipe else FADE):
@@ -247,6 +352,7 @@ def frame(sc, charts, i, t):
                 dl.text((mx, my), text, font=font(F_HEAD, 44), anchor="mm", fill=rgb + (int(255 * p),),
                         stroke_width=7, stroke_fill=BG + (int(255 * p),))
             im.paste(layer, (0, 0), layer)
+        draw_markers(im, s, t, cur)
 
     d = ImageDraw.Draw(im)
     centered(d, 120, sc["header"], font(F_HEAD, 46), INK)
@@ -258,6 +364,8 @@ def frame(sc, charts, i, t):
             d.text((W / 2 - f.getlength(line) / 2, y0 + j * 74), line, font=f, fill=INK)
     if sc.get("footer"):
         centered(d, 1480, sc["footer"], font(F_TAG, 34), (70, 76, 84))
+    if s.get("cta") and t > 0.2:
+        centered(d, PANEL_Y + 120, s["cta"], font(F_HEAD, 58), COLORS["blue"])
     if s.get("rec_tag") and head is not None:
         hw, hh = head.size
         hm = (np.asarray(head).astype(np.float32) * np.array(BG, np.float32) / 255).astype(np.uint8)
@@ -266,13 +374,16 @@ def frame(sc, charts, i, t):
         prev_label = sc["shots"][i - 1].get("label") if i else None
         p = 1.0 if not vivid or s["label"] == prev_label else ease(t / 0.28)
         f = font(F_HEAD, 84)
+        ly = 186 if s.get("sub") else 210
         if p >= 1:
-            centered(d, 210, s["label"], f, COLORS[s.get("color", "blue")])
+            centered(d, ly, s["label"], f, COLORS[s.get("color", "blue")])
         else:      # 役名が変わるときだけ、下から短く入る
             layer = Image.new("RGBA", (W, 140), (0, 0, 0, 0))
             ImageDraw.Draw(layer).text((W / 2 - f.getlength(s["label"]) / 2, 10 + 30 * (1 - p)), s["label"], font=f,
                                        fill=COLORS[s.get("color", "blue")] + (int(255 * p),))
-            im.paste(layer, (0, 200), layer)
+            im.paste(layer, (0, ly - 10), layer)
+    if s.get("sub"):    # 役名の下。役名は sub があるときだけ少し上げる(下の日時表示と重ねない)
+        centered(d, 300, s["sub"], font(F_HEAD, 44), INK)
     if s.get("tag"):
         d.text((60, PANEL_Y - 56), s["tag"], font=font(F_TAG, 38), fill=(70, 76, 84))
 
@@ -310,7 +421,8 @@ def board(sc, charts, out):
     for i, s in enumerate(sc["shots"]):
         x, y = (i % cols) * pw, (i // cols) * (ph + th)
         sheet.paste(frame(sc, charts, i, s["dur"] - 0.05).resize((pw, ph), Image.LANCZOS), (x, y))
-        src = s.get("img") or (f"録画 {s['rec'][0]}→{s['rec'][-1]}秒" if "rec" in s else "文字のみ")
+        src = s.get("img") or (f"録画 {s['rec'][0]}→{s['rec'][-1]}秒" if "rec" in s else
+                               "模式図" if "diagram" in s else "文字のみ")
         info = f"#{i + 1} {t0:.1f}〜{t0 + s['dur']:.1f}秒  {src}\n" + s.get("note", "")
         for j, line in enumerate(wrap(info, f, pw - 16)[:10]):
             d.text((x + 8, y + ph + 6 + j * 22), line, font=f, fill=(20, 20, 20))
@@ -339,10 +451,11 @@ def main():
     ap.add_argument("--out")
     a = ap.parse_args()
     sc = json.load(open(a.script, encoding="utf-8"))
-    global FPS, F_HEAD, F_CAP
+    global FPS, F_HEAD, F_CAP, F_TAG
     FPS = sc.get("fps", FPS)
     F_HEAD = os.path.join(HERE, "fonts", sc["font_head"]) if "font_head" in sc else F_HEAD
     F_CAP = os.path.join(HERE, "fonts", sc["font_cap"]) if "font_cap" in sc else F_CAP
+    F_TAG = os.path.join(HERE, "fonts", sc["font_tag"]) if "font_tag" in sc else F_TAG
     charts = Charts(os.path.join(os.path.dirname(os.path.abspath(a.script)), sc["assets"]), sc.get("look"))
     charts.rec_path = lambda sc: os.path.join(charts.base, sc["rec_file"])
     if a.board:

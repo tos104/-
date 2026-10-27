@@ -476,10 +476,15 @@ def fx_slot(c, t, sh):
 
 def token(text, size, fill, ink, pad=36):
     f = font(F_HEAD, size)
-    w = round(f.getlength(text)) + pad * 2
+    segs = segments(text)  # {} は強調色(札の地が明るいときは ACCENT)
+    w = round(sum(f.getlength(t) for t, _ in segs)) + pad * 2
     im = Image.new("RGBA", (w, size + pad * 2), (0, 0, 0, 0))
-    ImageDraw.Draw(im).rounded_rectangle((0, 0, w - 1, size + pad * 2 - 1), 24, fill=fill + (255,))
-    ImageDraw.Draw(im).text((pad, pad - size * 0.08), text, font=f, fill=ink)
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((0, 0, w - 1, size + pad * 2 - 1), 24, fill=fill + (255,))
+    x = pad
+    for t, hot in segs:
+        d.text((x, pad - size * 0.08), t, font=f, fill=(ACCENT if hot else ink))
+        x += f.getlength(t)
     return im
 
 

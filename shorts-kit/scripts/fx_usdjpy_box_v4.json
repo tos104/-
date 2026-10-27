@@ -1,0 +1,22 @@
+{
+ "assets": "../../output/fx_usdjpy_box/assets",
+ "rec_file": "replay.mov",
+ "header": "過去例｜ドル円 15分足",
+ "footer": "教育目的・投資助言ではありません",
+ "look": "vivid", "fps": 60, "type_cps": 22,
+ "font_head": "MPLUSRounded1c-ExtraBold.ttf", "font_cap": "MPLUSRounded1c-Bold.ttf",
+ "shots": [
+  {"rec": [38.0], "dur": 2.2, "rect": [900, 300, 600], "rect_end": [900, 300, 560], "rec_tag": true, "label": "このレンジ、どう攻める？", "color": "ink", "caption": "ライン2本で入って\n抜けたら出る", "type": false, "note": "HOOK。線のない 16:59。文言は案(要承認)"},
+  {"rec": [33.0], "dur": 2.2, "rect": [900, 300, 560], "rect_end": [900, 300, 540], "rec_tag": true, "trans": "wipe", "label": "レンジを囲む", "caption": "週明けはレンジ", "callouts": [[700, 283, "レンジ", "blue"]], "note": "ボックスを左から現す。声 6.9 秒「週明けは…ボックス」"},
+  {"rec": [33.0], "dur": 2.0, "rect": [880, 295, 480], "rect_end": [872, 290, 440], "rec_tag": true, "mark": [870, 252], "label": "ヒゲだけなら待つ", "color": "red", "caption": "ヒゲで抜けて戻るなら見送り", "note": "見送り条件(手法ナレッジ§6・§21 の必須)。シンプルにするなら削れる"},
+  {"rec": [33.0, 27.5], "dur": 2.6, "rect": [900, 300, 560], "rect_end": [880, 295, 560], "rec_tag": true, "label": "リボンが上抜け", "caption": "リボンがレンジを上に抜ける", "note": "16:59→20:14。ユーザーの手順①"},
+  {"rec": [27.5, 25.8], "dur": 1.6, "rect": [880, 295, 560], "rec_tag": true, "label": "押し目を待つ", "caption": "抜けた後の押し目", "note": "20:14→20:44。ユーザーの手順②"},
+  {"rec": [24.1], "dur": 2.2, "rect": [880, 295, 560], "rect_end": [895, 290, 530], "rec_tag": true, "trans": "wipe", "label": "切り下げラインを引く", "caption": "押し目に切り下げライン", "callouts": [[1000, 222, "切り下げライン", "ink"]], "note": "20:44。ユーザーの手順③"},
+  {"rec": [24.1, 22.6], "dur": 2.6, "rect": [895, 290, 530], "rect_end": [905, 285, 540], "rec_tag": true, "label": "抜けたらエントリー", "color": "blue", "caption": "ラインを抜けたらエントリー\n損切りは直近安値の下", "note": "20:44→20:59。ユーザーの手順④・損切り"},
+  {"rec": [16.75], "dur": 2.2, "rect": [920, 270, 600], "rect_end": [920, 262, 630], "rec_tag": true, "trans": "wipe", "label": "決済チャネルを引く", "caption": "トレンドラインでチャネル", "callouts": [[1010, 190, "決済チャネル", "ink"]], "note": "22:29。ユーザーの手順⑤"},
+  {"rec": [16.75, 3.5], "dur": 2.6, "rect": [920, 262, 630], "rect_end": [780, 200, 820], "rec_tag": true, "label": "抜けるまで持つ", "caption": "チャネルの中は保有\n(縦軸は自動で変わる)", "note": "22:29→翌 5:59。『チャネルを抜けたら決済』の裏返し(文言は要承認)"},
+  {"rec": [0.5], "dur": 3.0, "rect": [780, 200, 820], "rect_end": [800, 190, 780], "rec_tag": true, "trans": "wipe", "label": "チャネルを抜けたら決済", "color": "blue", "caption": "", "callouts": [[1075, 76, "決済", "green"], [1065, 176, "エントリー", "blue"], [1065, 275, "損切り", "red"]], "note": "5:59。最後の陰線がチャネル下側を割り、その終値が決済の線と一致(実測)。pips は出さない"},
+  {"rec": [0.5], "dur": 2.2, "rect": [800, 190, 780], "rect_end": [700, 260, 1000], "rec_tag": true, "label": "まとめ", "color": "ink", "caption": "レンジ抜け → 押し目\n→ ライン抜け", "type": false, "note": "手順の要約"},
+  {"card": "教育目的であり、金融・投資助言ではありません。取引判断はご自身で行ってください。", "dur": 1.8, "note": "手法ナレッジ§24 短縮版"}
+ ]
+}

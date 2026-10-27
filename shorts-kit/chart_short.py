@@ -9,6 +9,7 @@
   "assets": "../../output/fx_usdjpy_box/assets",   # 台本からの相対パス
   "header": "固定の見出し", "footer": "常に出す小さな注記(免責など)",
   "look": "vivid", "fps": 60, "type_cps": 22,      # 省略時は乗算で溶かす v2 の見た目・30fps・16 文字/秒
+  "font_head": "MPLUSRounded1c-ExtraBold.ttf", "font_cap": "MPLUSRounded1c-Bold.ttf",   # 省略時は Dela Gothic One / Rounded M+ Black
   "rec_file": "replay.mov",                         # 画面録画(assets からの相対パス)。録画を素材にするカットで使う
   "shots": [
     {"img": "2.png", "dur": 3.0,
@@ -338,8 +339,10 @@ def main():
     ap.add_argument("--out")
     a = ap.parse_args()
     sc = json.load(open(a.script, encoding="utf-8"))
-    global FPS
+    global FPS, F_HEAD, F_CAP
     FPS = sc.get("fps", FPS)
+    F_HEAD = os.path.join(HERE, "fonts", sc["font_head"]) if "font_head" in sc else F_HEAD
+    F_CAP = os.path.join(HERE, "fonts", sc["font_cap"]) if "font_cap" in sc else F_CAP
     charts = Charts(os.path.join(os.path.dirname(os.path.abspath(a.script)), sc["assets"]), sc.get("look"))
     charts.rec_path = lambda sc: os.path.join(charts.base, sc["rec_file"])
     if a.board:

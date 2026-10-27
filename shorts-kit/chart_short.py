@@ -8,6 +8,7 @@
 {
   "assets": "../../output/fx_usdjpy_box/assets",   # 台本からの相対パス
   "header": "固定の見出し", "footer": "常に出す小さな注記(免責など)",
+  "look": "vivid", "fps": 60, "type_cps": 22,      # 省略時は乗算で溶かす v2 の見た目・30fps・16 文字/秒
   "rec_file": "replay.mov",                         # 画面録画(assets からの相対パス)。録画を素材にするカットで使う
   "shots": [
     {"img": "2.png", "dur": 3.0,
@@ -19,7 +20,9 @@
      "note": "なぜこのカットがあるか"},
     {"rec": [33.0], "rect": [cx, cy, w], ...},       # 録画の 33.0 秒を静止画で。rect は録画の画素(中心 x, y と幅)
     {"rec": [33.0, 27.5], "rect": [...], "rect_end": [...], "rec_tag": true,   # 33.0→27.5 秒をカットの長さに合わせて流す(逆向き可)
-     "mark": [870, 250]},                            # 録画の画素の位置に × 印(見送り例)
+     "mark": [870, 250],                             # 録画の画素の位置に × 印(見送り例)
+     "trans": "wipe",                                # 前のカットから線が増えるとき、左から拭くように現す(既定は溶かす)
+     "callouts": [[640, 285, "ボックス", "blue"]]},   # 録画の画素の位置に添える短い注記(見本の DEMAND ZONE のように)
     {"card": "免責などの全文", "dur": 2.0}            # チャートなしで文字だけ
   ]
 }
@@ -28,7 +31,7 @@
 """
 import argparse, json, os, subprocess
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 W, H, FPS = 1080, 1920, 30
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -43,6 +46,7 @@ CAP_Y, CAP_W = 1270, 860      # 説明文(YouTube ショートの下部 UI よ�
 REC_WHITE = [(0, 0, 1280, 40), (0, 500, 1280, 588), (1215, 0, 1280, 588),   # 録画の画面上部・操作ボタン・価格目盛り
              (95, 60, 145, 105), (95, 400, 150, 455)]                          # チャート上のアイコン
 REC_HEAD = (95, 5, 400, 38)   # 録画の日時表示(実物をそのまま時刻の表示に使う)
+WIPE = 0.6                    # 線を左から拭くように現す長さ
 FADE = 0.35                   # 前の画像から次の画像へ溶かす長さ(線が描き足されたように見せる)
 TYPE_CPS = 16                 # 説明文を打ち出す速さ(文字/秒)
 
@@ -51,6 +55,11 @@ def font(path, size, _cache={}):
     if (path, size) not in _cache:
         _cache[path, size] = ImageFont.truetype(path, size)
     return _cache[path, size]
+
+
+def ease_io(k):
+    k = min(1.0, max(0.0, k))
+    return k * k * (3 - 2 * k)
 
 
 def ease(k):
@@ -70,16 +79,29 @@ def find_box(arr):
 
 
 class Charts:
-    def __init__(self, base):
-        self.base, self.cache = base, {}
+    def __init__(self, base, look=None):
+        self.base, self.cache, self.look = base, {}, look
+
+    def to_bg(self, arr):
+        """白地を背景色にする。既定は乗算(全体が少し沈む)。vivid は白だけを抜いて、色の彩度を上げる。"""
+        if self.look != "vivid":
+            return (arr.astype(np.float32) * np.array(BG, np.float32) / 255).astype(np.uint8)
+        out = []
+        for a in (arr if arr.ndim == 4 else [arr]):
+            sat = np.asarray(ImageEnhance.Color(Image.fromarray(a)).enhance(1.35)).astype(np.float32)
+            alpha = np.clip((255 - a.min(2).astype(np.float32)) / 40, 0, 1)[..., None]
+            out.append((sat * alpha + np.array(BG, np.float32) * (1 - alpha)).astype(np.uint8))
+        return np.stack(out) if arr.ndim == 4 else out[0]
+
+    def finish(self, img):
+        return img.filter(ImageFilter.UnsharpMask(1.6, 70, 2)) if self.look == "vivid" else img
 
     def get(self, name, anchor=None):
         if name not in self.cache:
             img = Image.open(os.path.join(self.base, name)).convert("RGB")
             arr = np.asarray(img)
             # 白地を見本の背景色に溶かす(乗算)。線やローソク足の色はほぼそのまま残る
-            mul = (arr.astype(np.float32) * np.array(BG, np.float32) / 255).astype(np.uint8)
-            self.cache[name] = [Image.fromarray(mul), find_box(arr)]
+            self.cache[name] = [Image.fromarray(self.to_bg(arr)), find_box(arr)]
         img, box = self.cache[name]
         if box is None:
             box = self.get(anchor)[1] if anchor else None
@@ -102,8 +124,7 @@ class Charts:
             heads = [Image.fromarray(a[REC_HEAD[1]:REC_HEAD[3], REC_HEAD[0]:REC_HEAD[2]]) for a in arr]
             for x0, y0, x1, y1 in REC_WHITE:
                 arr[:, y0:y1, x0:x1] = 255
-            mul = (arr.astype(np.float32) * np.array(BG, np.float32) / 255).astype(np.uint8)
-            frames = [Image.fromarray(m) for m in mul]
+            frames = [Image.fromarray(m) for m in self.to_bg(arr)]
             if r0 > r1:
                 frames, heads = frames[::-1], heads[::-1]
             self.cache[key] = frames, heads
@@ -163,8 +184,8 @@ def source(sc, charts, s, t, view):
     if "rec" in s:
         frames, heads = rec_frames(sc, charts, s)
         j = min(len(frames) - 1, int(t * FPS)) if len(frames) > 1 else 0
-        return rec_crop(frames[j], view), heads[j]
-    return charts.view(s["img"], view, s.get("anchor")), None
+        return charts.finish(rec_crop(frames[j], view)), heads[j]
+    return charts.finish(charts.view(s["img"], view, s.get("anchor"))), None
 
 
 def start_key(s):
@@ -178,7 +199,8 @@ def end_key(s):
 def frame(sc, charts, i, t):
     s = sc["shots"][i]
     dur = s["dur"]
-    k = ease(t / dur)
+    vivid = charts.look == "vivid"
+    k = ease_io(t / dur) if vivid else ease(t / dur)
     im = Image.new("RGB", (W, H), BG)
     head = None
     if "card" not in s:
@@ -189,10 +211,17 @@ def frame(sc, charts, i, t):
         prev = sc["shots"][i - 1] if i else None
         same_view = prev and "card" not in prev and \
             prev.get("crop_end", prev.get("rect_end", prev.get("crop", prev.get("rect")))) == crop
-        if same_view and end_key(prev) != start_key(s) and t < FADE:
+        wipe = s.get("trans") == "wipe"
+        if same_view and end_key(prev) != start_key(s) and t < (WIPE if wipe else FADE):
             # 同じ表示範囲で線が増えるときだけ溶かす(描き足しに見せる)。範囲が変わるときは切り替えて変化をはっきりさせる
             old, _ = source(sc, charts, prev, prev["dur"] - 1 / FPS, cur)
-            chart = Image.blend(old, chart, ease(t / FADE))
+            if wipe:   # 左から右へ、縁をぼかして拭き取る(線が引かれていくように見せる)
+                edge = ease_io(t / WIPE) * (W + 120) - 60
+                ramp = np.clip((edge - np.arange(W)) / 60 + 0.5, 0, 1)
+                mask = Image.fromarray((np.repeat(ramp[None, :], PANEL_H, 0) * 255).astype(np.uint8), "L")
+                chart = Image.composite(chart, old, mask)
+            else:
+                chart = Image.blend(old, chart, ease(t / FADE))
         im.paste(chart, (0, PANEL_Y), edge_mask())
         if s.get("mark") and t > 0.4:
             x, y = s["mark"]
@@ -203,6 +232,20 @@ def frame(sc, charts, i, t):
             dm = ImageDraw.Draw(im)
             for a, b in (((mx - r, my - r), (mx + r, my + r)), ((mx - r, my + r), (mx + r, my - r))):
                 dm.line((a, b), fill=COLORS["red"], width=14)
+        if s.get("callouts"):
+            layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            dl = ImageDraw.Draw(layer)
+            cx, cy, pw = cur
+            ph = pw * PANEL_H / W
+            for j, (x, y, text, color) in enumerate(s["callouts"]):
+                p = ease((t - 0.3 - 0.15 * j) / 0.25)
+                if p <= 0:
+                    continue
+                mx, my = (x - cx + pw / 2) / pw * W, (y - cy + ph / 2) / ph * PANEL_H + PANEL_Y + 18 * (1 - p)
+                rgb = COLORS[color]
+                dl.text((mx, my), text, font=font(F_HEAD, 44), anchor="mm", fill=rgb + (int(255 * p),),
+                        stroke_width=7, stroke_fill=BG + (int(255 * p),))
+            im.paste(layer, (0, 0), layer)
 
     d = ImageDraw.Draw(im)
     centered(d, 120, sc["header"], font(F_HEAD, 46), INK)
@@ -219,14 +262,23 @@ def frame(sc, charts, i, t):
         hm = (np.asarray(head).astype(np.float32) * np.array(BG, np.float32) / 255).astype(np.uint8)
         im.paste(Image.fromarray(hm).resize((round(hw * 1.3), round(hh * 1.3)), Image.LANCZOS), (40, PANEL_Y - 62))
     if s.get("label"):
-        centered(d, 210, s["label"], font(F_HEAD, 84), COLORS[s.get("color", "blue")])
+        prev_label = sc["shots"][i - 1].get("label") if i else None
+        p = 1.0 if not vivid or s["label"] == prev_label else ease(t / 0.28)
+        f = font(F_HEAD, 84)
+        if p >= 1:
+            centered(d, 210, s["label"], f, COLORS[s.get("color", "blue")])
+        else:      # 役名が変わるときだけ、下から短く入る
+            layer = Image.new("RGBA", (W, 140), (0, 0, 0, 0))
+            ImageDraw.Draw(layer).text((W / 2 - f.getlength(s["label"]) / 2, 10 + 30 * (1 - p)), s["label"], font=f,
+                                       fill=COLORS[s.get("color", "blue")] + (int(255 * p),))
+            im.paste(layer, (0, 200), layer)
     if s.get("tag"):
         d.text((60, PANEL_Y - 56), s["tag"], font=font(F_TAG, 38), fill=(70, 76, 84))
 
     cap = s.get("caption", "")
     if cap:
         f = font(F_CAP, 60)
-        n = int(t * TYPE_CPS) + 1 if s.get("type", True) else len(cap)
+        n = int(t * sc.get("type_cps", TYPE_CPS)) + 1 if s.get("type", True) else len(cap)
         for j, line in enumerate(wrap(cap, f, CAP_W)):   # 改行位置は全文で決め、打ち出し中に文字が跳ねないようにする
             d.text((W / 2 - f.getlength(line) / 2, CAP_Y + j * 82), line[:max(0, n)], font=f, fill=INK)
             n -= len(line)
@@ -286,7 +338,9 @@ def main():
     ap.add_argument("--out")
     a = ap.parse_args()
     sc = json.load(open(a.script, encoding="utf-8"))
-    charts = Charts(os.path.join(os.path.dirname(os.path.abspath(a.script)), sc["assets"]))
+    global FPS
+    FPS = sc.get("fps", FPS)
+    charts = Charts(os.path.join(os.path.dirname(os.path.abspath(a.script)), sc["assets"]), sc.get("look"))
     charts.rec_path = lambda sc: os.path.join(charts.base, sc["rec_file"])
     if a.board:
         board(sc, charts, a.board)

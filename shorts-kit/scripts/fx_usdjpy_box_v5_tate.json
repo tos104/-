@@ -21,7 +21,7 @@
   {"rec": [16.75], "dur": 2.2, "rect": [920, 270, 600], "rect_end": [920, 262, 630], "rec_tag": true, "trans": "wipe", "label": "待てる人", "color": "blue", "caption": "上がる安値をつないで\n平行に", "callouts": [[1010, 190, "決済チャネル", "ink"]], "note": "22:29。チャネルを左から現す", "tate": "決済は\nチャネル"},
   {"rec": [16.75, 3.5], "dur": 2.6, "rect": [920, 262, 630], "rect_end": [780, 200, 820], "rec_tag": true, "label": "待てる人", "color": "blue", "caption": "(縦軸は自動で変わる)", "note": "22:29→翌 5:59 を早送り", "tate": "抜けるまで\n持つ"},
   {"rec": [0.5], "dur": 2.8, "rect": [780, 200, 820], "rect_end": [800, 190, 760], "rec_tag": true, "trans": "wipe", "label": "待てる人", "color": "blue", "caption": "", "callouts": [[1075, 76, "決済", "green"], [1065, 176, "エントリー", "blue"], [1065, 275, "損切り", "red"]], "punch": [0.9], "note": "5:59。実際のエントリー・損切り・決済の線(後から記録した表示)。pips は出さない", "tate": "割れたら\n決済"},
-  {"diagram": "range_pullback_line", "dur": 3.2, "label": "まとめ", "color": "ink", "caption": "形が揃うまで、待つ", "type": false, "note": "模式図で手順の形を描く(初めての人向け)。実際の価格ではないと明示", "tate": "形が揃うまで\n待つ"},
+  {"diagram": "range_pullback_line", "dur": 3.2, "label": "まとめ", "color": "ink", "caption": "形が揃うまで、待つ", "type": false, "note": "模式図で手順の形を描く(初めての人向け)。実際の価格ではないと明示"},
   {"card": "教育目的であり、金融・投資助言ではありません。取引判断はご自身で行ってください。", "dur": 2.0, "cta": "保存して、次のチャートで試す", "note": "保存の呼びかけ(文言は案)+免責"}
  ]
 }

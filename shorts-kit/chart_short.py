@@ -375,7 +375,85 @@ def draw_ribbon(im, g, x_now, oy, k):
     im.paste(layer, (0, 0), layer)
 
 
+SKETCH = {
+    # ユーザーのスケッチ(2026-10-28): レンジの中でリボンが上がっていき、値動きは上に抜けて山 → レンジ右上の角(リボンが
+    # 抜ける所)まで押す → 山からの切り下げラインを抜けてエントリー → 加速。座標は帯の中(幅 1080)
+    "dy": 140, "box": (60, 330, 820, 560),
+    "path": [(40, 520), (90, 545), (210, 345), (340, 550), (470, 350), (600, 548), (700, 200), (740, 290),
+             (765, 265), (810, 335), (1040, 90)],
+    "fast": [(70, 505), (300, 490), (520, 450), (700, 390), (810, 345), (1000, 190)],
+    "slow": [(70, 535), (300, 520), (520, 485), (700, 420), (810, 362), (1000, 235)],
+    "line": ((690, 190), (900, 430)), "ring": (810, 340), "stop": (770, 900, 385),
+}
+
+
+def draw_sketch(im, t, dur):
+    g = SKETCH
+    k = t / max(dur - 0.6, 0.1)
+    oy = PANEL_Y + g["dy"]
+
+    def P(x, y):               # 縦に 1.5 倍・横に 0.88 倍(右側にラベルの場所を空ける)
+        return 40 + (x - 40) * 0.88, oy + 330 + (y - 330) * 1.5
+
+    d = ImageDraw.Draw(im)
+    (bx0, by0), (bx1, by1) = P(*g["box"][:2]), P(*g["box"][2:])
+    bk = ease(k / 0.12)
+    if bk > 0:
+        d.rectangle((bx0, by0, bx0 + (bx1 - bx0) * bk, by1), fill=(214, 228, 245), outline=COLORS["blue"], width=5)
+        d.text((bx0, by1 + 24), "レンジ", font=font(F_HEAD, 38), fill=COLORS["blue"])
+    raw = poly_part(g["path"], (k - 0.1) / 0.72)
+    x_now = raw[-1][0]
+    xs = np.arange(g["fast"][0][0], g["fast"][-1][0] + 1, 4)
+    fy = np.interp(xs, *zip(*g["fast"]))
+    sy = np.interp(xs, *zip(*g["slow"]))
+    n = int(np.searchsorted(xs, x_now))
+    if n > 1:                  # リボン(2 本の線と帯)は値動きが描けている所まで
+        layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
+        dl = ImageDraw.Draw(layer)
+        top = [P(x, y) for x, y in zip(xs[:n], fy[:n])]
+        bot = [P(x, y) for x, y in zip(xs[:n], sy[:n])]
+        dl.polygon(top + bot[::-1], fill=(220, 70, 60, 70))
+        dl.line(top, fill=(220, 70, 60, 255), width=5)
+        dl.line(bot, fill=(60, 110, 200, 255), width=5)
+        im.paste(layer, (0, 0), layer)
+        d = ImageDraw.Draw(im)
+        if k > 0.3:
+            lx, ly = P(300, 505)
+            d.text((lx - 30, by1 + 24), "リボン", font=font(F_HEAD, 38), fill=COLORS["red"])
+            d.line((lx, by1 + 20, lx, ly), fill=COLORS["red"], width=3)
+    if len(raw) > 1:
+        d.line([P(x, y) for x, y in raw], fill=INK, width=8, joint="curve")
+    rx, ry = P(*g["ring"])
+    if x_now >= g["ring"][0]:  # レンジ右上の角(リボンが抜ける所)まで押した所
+        p = ease((k - 0.62) / 0.08)
+        r = 46 * (0.8 + 0.2 * p)
+        d.ellipse((rx - r, ry - r, rx + r, ry + r), outline=COLORS["red"], width=7)
+        d.line((rx, ry + r, rx, by1 + 18), fill=COLORS["red"], width=3)
+        d.text((rx, by1 + 24), "リボンが抜けた所まで押す", font=font(F_HEAD, 34), fill=COLORS["red"], anchor="ma")
+        (x0, y0), (x1, y1) = P(*g["line"][0]), P(*g["line"][1])
+        p = ease((k - 0.64) / 0.1)
+        d.line((x0, y0, x0 + (x1 - x0) * p, y0 + (y1 - y0) * p), fill=(90, 90, 96), width=6)
+    if k > 0.76:               # 抜けてエントリー、損切りは押し目の下
+        ex, ey = P(822, 322)
+        d.ellipse((ex - 15, ey - 15, ex + 15, ey + 15), fill=COLORS["blue"], outline=(255, 255, 255), width=4)
+        d.text((ex + 34, ey - 6), "エントリー", font=font(F_HEAD, 36), fill=COLORS["blue"], anchor="lm",
+               stroke_width=5, stroke_fill=BG)
+        (sx0, sy0), (sx1, _) = P(g["stop"][0], g["stop"][2]), P(g["stop"][1], g["stop"][2])
+        xx = sx0
+        while xx < sx1:
+            d.line((xx, sy0, min(xx + 14, sx1), sy0), fill=COLORS["red"], width=5)
+            xx += 24
+        d.text((sx1 + 10, sy0), "損切り", font=font(F_HEAD, 34), fill=COLORS["red"], anchor="lm")
+    if k > 0.92:               # 加速
+        ax, ay = P(1000, 150)
+        d.text((ax + 20, ay + 20), "加速", font=font(F_HEAD, 46), fill=COLORS["red"], anchor="lm",
+               stroke_width=6, stroke_fill=BG)
+    d.text((W - 40, by1 + 120), "模式図", font=font(F_TAG, 30), fill=(90, 96, 104), anchor="rm")
+
+
 def draw_diagram(im, name, t, dur):
+    if name == "sketch":
+        return draw_sketch(im, t, dur)
     g = DIAGRAMS[name]
     d = ImageDraw.Draw(im)
     k = t / max(dur - 0.6, 0.1)

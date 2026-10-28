@@ -339,7 +339,9 @@ def _traced(scale=1.0):
         "dy": 230, "box": T(400, 245) + T(1005, 310), "range_end": T(880, 0)[0],
         "path": [T(*p) for p in path], "ribbon_fast": [T(*p) for p in fast], "ribbon_slow": [T(*p) for p in slow],
         "line": (T(928, 145), T(997, 265)), "entry": T(970, 218), "stop": (T(950, 0)[0], T(1010, 0)[0], T(0, 252)[1]),
-        "channel": ((T(928, 280), T(1118, 92)), (T(930, 158), T(1045, 70))), "exit": T(1105, 103),
+        # トレンドチャネルは平行。下の線の傾きをそのまま使い、上の線は 1 点(録画で読んだ上限の高値 1045,70)を通す
+        "channel": ((T(928, 280), T(1118, 92)), (T(930, 70 + (280 - 92) / (1118 - 928) * (1045 - 930)), T(1045, 70))),
+        "exit": T(1105, 103),
         "ribbon": True, "exit_dy": 60, "labels_below": True, "follow_path": True,
         "X": lambda x: T(x, 0)[0],
     }

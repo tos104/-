@@ -33,7 +33,8 @@
                  {"type": "ring", "x": 1098, "y": 298, "r": 30, "t": 2.0, "color": "red"},              # 丸で囲む
                  {"type": "hline", "x": 1095, "x2": 1140, "y": 298, "t": 1.5, "color": "red", "text": "損切り"}],  # 破線
      "reveal": {"x": [780, 870], "box": [300, 351, 1211]},   # rec の絵を左から x まで出していく(リアルタイムに見せる)。box は先に引いてあるボックスを右側にも描く
-     "punch": [1.4]},                                 # その秒にカメラが一瞬寄る(決め手の場面)
+     "punch": [1.4],                                  # その秒にカメラが一瞬寄る(決め手の場面)
+     "sfx": [["pop", 1.4, 0.5]]},                     # 効果音(se.py の名前, カット内の秒, 音量)。台本に "sfx" がなければ無音
     {"diagram": "range_pullback_line", "dur": 3.0},  # 模式図(手順の形を線で描く。実際の価格ではない)
     {"card": "免責などの全文", "dur": 2.0}            # チャートなしで文字だけ
   ]
@@ -202,7 +203,7 @@ def source(sc, charts, s, t, view):
             rv = s["reveal"]
             out = np.asarray(img).copy()
             x0, x1 = rv["x"]
-            edge = int(x0 + (x1 - x0) * min(1.0, t / s["dur"]))
+            edge = int(x0 + (x1 - x0) * min(1.0, t / rv.get("until", s["dur"])))
             out[:, edge + 1:] = BG
             if rv.get("box"):
                 top, bottom, right = rv["box"]       # 録画の画素(上辺・下辺・右端)
@@ -317,6 +318,32 @@ def poly_part(pts, k):
     return out
 
 
+def _traced():
+    """録画 0.5 秒(10/20 5:59)の全体チャートをなぞった図。座標は録画の画素で読み取り、帯の座標へ写す。"""
+    T = lambda x, y: (round(40 + (x - 395) * 1.42), round(60 + (y - 60) * 1.9))
+    path = [(400, 230), (410, 213), (440, 290), (453, 317), (475, 300), (520, 257), (540, 300), (563, 327),
+            (580, 250), (597, 300), (610, 262), (630, 330), (640, 315), (663, 165), (690, 270), (705, 262),
+            (733, 307), (745, 330), (767, 320), (785, 370), (800, 263), (813, 310), (830, 243), (870, 235),
+            (887, 293), (893, 313), (900, 247), (923, 217), (943, 182), (957, 203), (963, 237), (977, 197),
+            (983, 137), (993, 173), (1000, 148), (1007, 117), (1027, 130), (1040, 83), (1060, 113), (1090, 80),
+            (1110, 107)]
+    fast = [(400, 240), (430, 245), (460, 270), (480, 295), (500, 305), (530, 300), (560, 290), (600, 290),
+            (640, 293), (670, 282), (700, 268), (720, 252), (750, 285), (780, 300), (800, 308), (820, 300),
+            (850, 270), (880, 250), (910, 240), (950, 230), (980, 205), (1010, 175), (1040, 138), (1070, 110),
+            (1100, 95)]
+    slow = [(400, 243), (430, 240), (460, 262), (500, 280), (530, 285), (560, 300), (600, 303), (640, 302),
+            (660, 300), (690, 285), (720, 282), (750, 283), (780, 288), (810, 285), (840, 292), (880, 290),
+            (900, 285), (930, 270), (960, 245), (990, 225), (1020, 195), (1050, 165), (1080, 140), (1100, 125)]
+    return {
+        "dy": 230, "box": T(400, 245) + T(1005, 310), "range_end": T(880, 0)[0],
+        "path": [T(*p) for p in path], "ribbon_fast": [T(*p) for p in fast], "ribbon_slow": [T(*p) for p in slow],
+        "line": (T(928, 145), T(997, 265)), "entry": T(970, 218), "stop": (T(950, 0)[0], T(1010, 0)[0], T(0, 252)[1]),
+        "channel": ((T(928, 280), T(1118, 92)), (T(930, 158), T(1045, 70))), "exit": T(1105, 103),
+        "ribbon": True, "exit_dy": 60, "labels_below": True,
+    }
+
+
+DIAGRAMS_EXTRA = {"traced": _traced}
 DIAGRAMS = {
     # 最初の図解(range_pullback_line)のレンジを右へ延ばし、押し目がレンジ上辺まで戻ってからエントリー(ユーザー指定 2026-10-28)
     "range_extended": {
@@ -349,7 +376,10 @@ DIAGRAMS = {
 
 
 def ribbon_lines(g):
-    """模式図の値動き(折れ線)から、短期リボンの 2 本(遅れて追う移動平均)を作る。"""
+    """模式図の値動き(折れ線)から、短期リボンの 2 本(遅れて追う移動平均)を作る。なぞった線があればそれを使う。"""
+    if "ribbon_fast" in g:
+        xs = np.arange(g["ribbon_fast"][0][0], g["ribbon_fast"][-1][0] + 1, 4)
+        return xs, np.interp(xs, *zip(*g["ribbon_fast"])), np.interp(xs, *zip(*g["ribbon_slow"]))
     xs = np.arange(g["path"][0][0], g["path"][-1][0] + 1, 4)
     ys = np.interp(xs, [p[0] for p in g["path"]], [p[1] for p in g["path"]])
     def ma(n):     # 直近 n 点の平均(過去だけを見る)
@@ -379,8 +409,13 @@ def draw_ribbon(im, g, x_now, oy, k):
         i = out[0]
         cx, cy = xs[i], oy + (fast[i] + slow[i]) / 2
         dl.ellipse((cx - 44, cy - 44, cx + 44, cy + 44), outline=COLORS["red"] + (255,), width=7)
-        dl.multiline_text((cx - 52, cy + 10), "リボンが\nレンジを抜ける", font=font(F_HEAD, 34), fill=COLORS["red"] + (255,),
-                          anchor="rd", align="right", stroke_width=5, stroke_fill=BG + (255,))
+        if g.get("labels_below"):    # ボックスの下に文字を置き、丸から線で結ぶ
+            yb = oy + g["box"][3] + 16
+            dl.line((cx, cy + 44, cx, yb), fill=COLORS["red"] + (255,), width=3)
+            dl.text((cx, yb + 4), "リボンがレンジを抜ける", font=font(F_HEAD, 34), fill=COLORS["red"] + (255,), anchor="ma")
+        else:
+            dl.multiline_text((cx - 52, cy + 10), "リボンが\nレンジを抜ける", font=font(F_HEAD, 34), fill=COLORS["red"] + (255,),
+                              anchor="rd", align="right", stroke_width=5, stroke_fill=BG + (255,))
     im.paste(layer, (0, 0), layer)
 
 
@@ -463,7 +498,7 @@ def draw_sketch(im, t, dur):
 def draw_diagram(im, name, t, dur):
     if name == "sketch":
         return draw_sketch(im, t, dur)
-    g = DIAGRAMS[name]
+    g = DIAGRAMS_EXTRA[name]() if name in DIAGRAMS_EXTRA else DIAGRAMS[name]
     d = ImageDraw.Draw(im)
     k = t / max(dur - 0.6, 0.1)
     oy = PANEL_Y + g.get("dy", 0)
@@ -480,7 +515,10 @@ def draw_diagram(im, name, t, dur):
     bk = ease(k / 0.15)
     if bk > 0:      # レンジの帯を左から広げる
         d.rectangle((bx0, oy + by0, bx0 + (bx1 - bx0) * bk, oy + by1), fill=(198, 216, 236), outline=COLORS["blue"], width=5)
-        d.text((bx0 + 12, oy + by0 - 52), "レンジ", font=font(F_HEAD, 40), fill=COLORS["blue"])
+        if g.get("labels_below"):
+            d.text((bx0 + 12, oy + by1 + 16), "レンジ", font=font(F_HEAD, 40), fill=COLORS["blue"])
+        else:
+            d.text((bx0 + 12, oy + by0 - 52), "レンジ", font=font(F_HEAD, 40), fill=COLORS["blue"])
     pts = [(x, oy + y) for x, y in poly_part(g["path"], (k - 0.1) / 0.75)]
     if g.get("ribbon") and len(pts) > 1:
         draw_ribbon(im, g, pts[-1][0], oy, k)
@@ -658,16 +696,44 @@ def board(sc, charts, out):
     print(f"{out} ({t0:.1f}秒・{n}カット)")
 
 
+def sfx_track(sc):
+    """各カットの "sfx" を 1 本の音声にまとめる(se.py で合成。外部素材なし)。なければ None。"""
+    events, t0 = [], 0.0
+    for s in sc["shots"]:
+        for name, at, vol in s.get("sfx", []):
+            events.append((t0 + at, name, vol))
+        t0 += s["dur"]
+    if not events:
+        return None
+    import se
+    mix = np.zeros(int((t0 + 1.5) * se.SR))
+    for at, name, vol in events:
+        x = se.get(name) * vol
+        i = int(at * se.SR)
+        mix[i:i + len(x)] += x[:len(mix) - i]
+    return mix[:int(t0 * se.SR)], se
+
+
 def render(sc, charts, out):
+    track = sfx_track(sc)
+    video = out if track is None else out + ".video.mp4"
     enc = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
                             "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-crf", "18",
-                            "-preset", "medium", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out],
+                            "-preset", "medium", "-pix_fmt", "yuv420p", "-movflags", "+faststart", video],
                            stdin=subprocess.PIPE)
     for i, s in enumerate(sc["shots"]):
         for fno in range(round(s["dur"] * FPS)):
             enc.stdin.write(frame(sc, charts, i, fno / FPS).tobytes())
     enc.stdin.close()
     enc.wait()
+    if track is not None:      # 効果音を付けて書き出す
+        mix, se = track
+        wav = out + ".sfx.wav"
+        se.write_wav(wav, mix)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", video, "-i", wav, "-c:v", "copy", "-c:a", "aac",
+                        "-b:a", "192k", "-shortest", "-movflags", "+faststart", out], check=True)
+        os.remove(video)
+        os.remove(wav)
     print(out)
 
 

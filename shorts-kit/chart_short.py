@@ -717,7 +717,7 @@ def frame(sc, charts, i, t):
             d.text((W / 2 - f.getlength(line) / 2, y0 + j * 74), line, font=f, fill=INK)
     if sc.get("footer"):
         centered(d, 1480, sc["footer"], font(F_TAG, 34), (70, 76, 84))
-    if s.get("cta") and t > 0.2:
+    if s.get("cta"):            # 下の免責と同時に出す(ずらさない)
         centered(d, PANEL_Y + 120, s["cta"], font(F_HEAD, 58), COLORS["blue"])
     if s.get("rec_tag") and head is not None:
         hw, hh = head.size
@@ -725,7 +725,7 @@ def frame(sc, charts, i, t):
         im.paste(Image.fromarray(hm).resize((round(hw * 1.3), round(hh * 1.3)), Image.LANCZOS), (40, PANEL_Y - 62))
     if s.get("label"):
         prev_label = sc["shots"][i - 1].get("label") if i else None
-        p = 1.0 if not vivid or s["label"] == prev_label else ease(t / 0.28)
+        p = 1.0 if not vivid or i == 0 or s["label"] == prev_label else ease(t / 0.28)   # 1 カット目は最初から出す
         f = font(F_HEAD, 84)
         ly = 186 if s.get("sub") else 210
         if p >= 1:

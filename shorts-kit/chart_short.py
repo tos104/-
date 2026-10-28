@@ -318,6 +318,15 @@ def poly_part(pts, k):
 
 
 DIAGRAMS = {
+    # 最初の図解(range_pullback_line)のレンジを右へ延ばし、押し目がレンジ上辺まで戻ってからエントリー(ユーザー指定 2026-10-28)
+    "range_extended": {
+        "dy": 150, "box": (90, 430, 800, 560), "range_end": 560,
+        "path": [(60, 520), (130, 450), (190, 540), (260, 455), (330, 545), (400, 450), (470, 535), (560, 420),
+                 (640, 330), (700, 360), (735, 345), (770, 428), (820, 330), (880, 270), (930, 290), (980, 215),
+                 (1020, 225), (1040, 300)],
+        "line": ((650, 300), (840, 420)), "entry": (790, 389), "stop": (720, 830, 452),
+        "channel": (((790, 400), (1060, 160)), ((760, 330), (1040, 80))), "exit": (1040, 300), "ribbon": True, "exit_dy": 130,
+    },
     # レンジ → 抜け → レンジ上限まで押し目 → 押し目の切り下げライン抜けでエントリー(損切りは押し目の下)→ トレンドチャネル → チャネル抜けで決済
     "range_retest": {
         "dy": 150, "box": (90, 430, 560, 560), "zone": (560, 430, 800, 560),
@@ -365,7 +374,7 @@ def draw_ribbon(im, g, x_now, oy, k):
                     (xs[i], oy + slow[i])], fill=col + (70,))
     dl.line([(x, oy + y) for x, y in zip(xs[:n], fast[:n])], fill=(220, 70, 60, 255), width=5)
     dl.line([(x, oy + y) for x, y in zip(xs[:n], slow[:n])], fill=(60, 110, 200, 255), width=5)
-    out = [i for i in range(n) if xs[i] > g["box"][2] and max(fast[i], slow[i]) < top]
+    out = [i for i in range(n) if xs[i] > g.get("range_end", g["box"][2]) and max(fast[i], slow[i]) < top]
     if out:                    # 帯ごとレンジ上辺を抜けた最初の所
         i = out[0]
         cx, cy = xs[i], oy + (fast[i] + slow[i]) / 2
@@ -505,7 +514,7 @@ def draw_diagram(im, name, t, dur):
             d.line((x0, oy + y0, x0 + (x1 - x0) * p, oy + y0 + (y1 - y0) * p), fill=(90, 90, 96), width=5)
     if k > 0.95:
         x, y = g["exit"]
-        d.text((x - 10, oy + y + (70 if g.get("dy") else 40)), "決済", font=font(F_HEAD, 40), fill=COLORS["green"], anchor="mm")
+        d.text((x - 10, oy + y + g.get("exit_dy", 70 if g.get("dy") else 40)), "決済", font=font(F_HEAD, 40), fill=COLORS["green"], anchor="mm")
     d.text((W - 40, oy + PANEL_H - 40), "模式図", font=font(F_TAG, 32), fill=(90, 96, 104), anchor="rm")
 
 

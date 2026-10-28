@@ -1,7 +1,7 @@
 {
  "assets": "../../output/fx_usdjpy_box/assets",
  "rec_file": "replay.mov",
- "header": "飛び乗る人 vs 待てる人",
+ "header": "飛び乗る人 or 待てる人",
  "look": "vivid",
  "fps": 60,
  "type_cps": 24,

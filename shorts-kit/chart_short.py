@@ -10,7 +10,8 @@
   "header": "固定の見出し", "footer": "常に出す小さな注記(免責など)",
   "look": "vivid", "fps": 60, "type_cps": 22,      # 省略時は乗算で溶かす v2 の見た目・30fps・16 文字/秒
   "font_head": "MPLUSRounded1c-ExtraBold.ttf", "font_cap": "MPLUSRounded1c-Bold.ttf",   # 省略時は Dela Gothic One / Rounded M+ Black
-  "font_tag": "ShipporiMincho-Medium.ttf",                                               # 小さい文字(注記・役名の下)
+  "font_tag": "ShipporiMincho-Medium.ttf", "bg": [255, 255, 255],   # bg 省略時は見本の青灰 #D4DDE5
+  "panel_y": 520,                                   # チャートの帯の上端(省略時 420)                                               # 小さい文字(注記・役名の下)
   "rec_file": "replay.mov",                         # 画面録画(assets からの相対パス)。録画を素材にするカットで使う
   "shots": [
     {"img": "2.png", "dur": 3.0,
@@ -28,7 +29,10 @@
      "sub": "役名の下の小さな見出し",
      "tate": "縦書きの\n大見出し", "tate_side": "right",   # 台本の "layout": "tate" のとき縦書きで出す(既定は左側)
      "markers": [{"type": "dot", "x": 863, "y": 288, "t": 0.2, "color": "red", "text": "買い"},      # 脈打つ点
-                 {"type": "arrow", "x": 880, "y": 250, "x2": 896, "y2": 318, "t": 0.9, "color": "red"}],  # 伸びる矢印
+                 {"type": "arrow", "x": 880, "y": 250, "x2": 896, "y2": 318, "t": 0.9, "color": "red"},   # 伸びる矢印
+                 {"type": "ring", "x": 1098, "y": 298, "r": 30, "t": 2.0, "color": "red"},              # 丸で囲む
+                 {"type": "hline", "x": 1095, "x2": 1140, "y": 298, "t": 1.5, "color": "red", "text": "損切り"}],  # 破線
+     "reveal": {"x": [780, 870], "box": [300, 351, 1211]},   # rec の絵を左から x まで出していく(リアルタイムに見せる)。box は先に引いてあるボックスを右側にも描く
      "punch": [1.4]},                                 # その秒にカメラが一瞬寄る(決め手の場面)
     {"diagram": "range_pullback_line", "dur": 3.0},  # 模式図(手順の形を線で描く。実際の価格ではない)
     {"card": "免責などの全文", "dur": 2.0}            # チャートなしで文字だけ
@@ -53,7 +57,7 @@ PANEL_Y, PANEL_H = 420, 780   # チャートを置く帯(横長のチャート�
 CAP_Y, CAP_W = 1270, 860      # 説明文(YouTube ショートの下部 UI より上に収める)
 REC_WHITE = [(0, 0, 1280, 40), (0, 500, 1280, 588), (1215, 0, 1280, 588),   # 録画の画面上部・操作ボタン・価格目盛り
              (95, 60, 145, 105), (95, 400, 150, 455)]                          # チャート上のアイコン
-REC_HEAD = (95, 5, 400, 38)   # 録画の日時表示(実物をそのまま時刻の表示に使う)
+REC_HEAD = (95, 5, 400, 47)   # 録画の日時表示(実物をそのまま時刻の表示に使う)
 WIPE = 0.6                    # 線を左から拭くように現す長さ
 FADE = 0.35                   # 前の画像から次の画像へ溶かす長さ(線が描き足されたように見せる)
 TYPE_CPS = 16                 # 説明文を打ち出す速さ(文字/秒)
@@ -192,7 +196,25 @@ def source(sc, charts, s, t, view):
     if "rec" in s:
         frames, heads = rec_frames(sc, charts, s)
         j = min(len(frames) - 1, int(t * FPS)) if len(frames) > 1 else 0
-        return charts.finish(rec_crop(frames[j], view)), heads[j]
+        img = frames[j]
+        if s.get("reveal"):
+            # 足は左から x まで出す。右側は背景にし、先に引いてあったボックスだけを同じ色で描き直す
+            rv = s["reveal"]
+            out = np.asarray(img).copy()
+            x0, x1 = rv["x"]
+            edge = int(x0 + (x1 - x0) * min(1.0, t / s["dur"]))
+            out[:, edge + 1:] = BG
+            if rv.get("box"):
+                top, bottom, right = rv["box"]       # 録画の画素(上辺・下辺・右端)
+                src = np.asarray(img)
+                fill, line = src[(top + bottom) // 2, right - 20], src[top + 1, right - 20]
+                if edge < right:
+                    out[top:bottom, edge + 1:right] = fill
+                    out[top:top + 4, edge + 1:right + 2] = line
+                    out[bottom - 2:bottom + 2, edge + 1:right + 2] = line
+                    out[top:bottom + 2, right - 1:right + 2] = line
+            img = Image.fromarray(out)
+        return charts.finish(rec_crop(img, view)), heads[j]
     return charts.finish(charts.view(s["img"], view, s.get("anchor"))), None
 
 
@@ -228,6 +250,19 @@ def draw_markers(im, s, t, cur):
             if m.get("text"):   # 点の左上に置く(右側は値動きの続きがあるため)
                 d.text((x - 26, y - 34), m["text"], font=font(F_HEAD, 40), anchor="rm", fill=rgb + (int(255 * min(1, p)),),
                        stroke_width=6, stroke_fill=BG + (255,))
+        elif m["type"] == "ring":
+            r = m.get("r", 30) * W / cur[2] * (0.85 + 0.15 * ease(p))
+            d.ellipse((x - r, y - r, x + r, y + r), outline=rgb + (int(255 * min(1, p)),), width=8)
+        elif m["type"] == "hline":    # 破線(損切りなど)を左から引き、右端に文字
+            x2, _ = to_panel(m["x2"], m["y"], cur)
+            ex = x + (x2 - x) * ease(p)
+            xx = x
+            while xx < ex:
+                d.line((xx, y, min(xx + 22, ex), y), fill=rgb + (255,), width=7)
+                xx += 36
+            if m.get("text") and p >= 1:
+                d.text((x2 + 14, y), m["text"], font=font(F_HEAD, 40), anchor="lm", fill=rgb + (255,),
+                       stroke_width=6, stroke_fill=BG + (255,))
         elif m["type"] == "arrow":
             x2, y2 = to_panel(m["x2"], m["y2"], cur)
             k = ease(p)
@@ -243,9 +278,10 @@ TATE_ROT = set("ー－—―～〜…‥()（）「」『』[]［］-=＝")   # 
 TATE_SMALL = set("、。，．")                              # 縦書きで右上に寄せる文字
 
 
-def draw_tate(im, text, f, fill, n, side="left", y_top=PANEL_Y + 20):
+def draw_tate(im, text, f, fill, n, side="left", y_top=None):
     """縦書き(右の列から左へ)。n 文字目まで出す。読みやすいよう背景色のふちを付ける。"""
     size = f.size
+    y_top = PANEL_Y + 20 if y_top is None else y_top
     cols = text.split("\n")
     pitch_x, pitch_y = size * 1.18, size * 1.04
     x_left = 96 if side == "left" else W - 96 - len(cols) * pitch_x
@@ -282,6 +318,15 @@ def poly_part(pts, k):
 
 
 DIAGRAMS = {
+    # レンジ → 抜け → レンジ上限まで押し目 → 押し目の切り下げライン抜けでエントリー(損切りは押し目の下)→ トレンドチャネル → チャネル抜けで決済
+    "range_retest": {
+        "dy": 150, "box": (90, 430, 560, 560), "zone": (560, 430, 800, 560),
+        "path": [(60, 520), (130, 450), (190, 540), (260, 455), (330, 545), (400, 450), (470, 535), (560, 440),
+                 (620, 330), (660, 370), (690, 350), (730, 455), (790, 370), (850, 300), (880, 320), (940, 230),
+                 (980, 250), (1030, 170), (1050, 250)],
+        "line": ((600, 320), (800, 420)), "entry": (766, 403), "stop": (690, 790, 480),
+        "channel": (((790, 383), (1060, 194)), ((790, 323), (1060, 134))), "exit": (1040, 208),
+    },
     # レンジ → リボンごと上抜け → 押し目に切り下げライン → 抜けてエントリー → チャネル → 割れて決済(形だけ。価格ではない)
     "range_pullback_line": {
         "box": (90, 430, 560, 560),
@@ -298,7 +343,16 @@ def draw_diagram(im, name, t, dur):
     g = DIAGRAMS[name]
     d = ImageDraw.Draw(im)
     k = t / max(dur - 0.6, 0.1)
-    oy = PANEL_Y
+    oy = PANEL_Y + g.get("dy", 0)
+    if "zone" in g and k > 0.15:    # レンジの高さを右へ延ばす(押し目がレンジに戻る場所)
+        zx0, zy0, zx1, zy1 = g["zone"]
+        p = ease((k - 0.15) / 0.15)
+        zx = zx0 + (zx1 - zx0) * p
+        xx = zx0
+        while xx < zx:
+            for yy in (zy0, zy1):
+                d.line((xx, oy + yy, min(xx + 16, zx), oy + yy), fill=COLORS["blue"], width=4)
+            xx += 28
     bx0, by0, bx1, by1 = g["box"]
     bk = ease(k / 0.15)
     if bk > 0:      # レンジの帯を左から広げる
@@ -311,18 +365,30 @@ def draw_diagram(im, name, t, dur):
         (x0, y0), (x1, y1) = g["line"]
         p = ease((k - 0.5) / 0.12)
         d.line((x0, oy + y0, x0 + (x1 - x0) * p, oy + y0 + (y1 - y0) * p), fill=(90, 90, 96), width=6)
+    if "stop" in g and k > 0.66:   # 損切り(押し目の下)
+        sx0, sx1, sy = g["stop"]
+        p = ease((k - 0.66) / 0.08)
+        xx = sx0
+        while xx < sx0 + (sx1 - sx0) * p:
+            d.line((xx, oy + sy, min(xx + 14, sx1), oy + sy), fill=COLORS["red"], width=5)
+            xx += 24
+        if p >= 1:
+            d.text((sx1 + 10, oy + sy), "損切り", font=font(F_HEAD, 36), fill=COLORS["red"], anchor="lm")
     if k > 0.62:
         x, y = g["entry"]
         r = 16 * ease((k - 0.62) / 0.06)
         d.ellipse((x - r, oy + y - r, x + r, oy + y + r), fill=COLORS["blue"], outline=(255, 255, 255), width=4)
-        d.text((x - 30, oy + y + 70), "エントリー", font=font(F_HEAD, 38), fill=COLORS["blue"], anchor="rm")
+        if g.get("dy"):    # 新しい図: 点の右下に置く(左はレンジを延ばした破線と重なる)
+            d.text((x + 40, oy + y + 12), "エントリー", font=font(F_HEAD, 38), fill=COLORS["blue"], anchor="lm")
+        else:
+            d.text((x - 30, oy + y + 70), "エントリー", font=font(F_HEAD, 38), fill=COLORS["blue"], anchor="rm")
     if k > 0.72:
         p = ease((k - 0.72) / 0.12)
         for (x0, y0), (x1, y1) in g["channel"]:
             d.line((x0, oy + y0, x0 + (x1 - x0) * p, oy + y0 + (y1 - y0) * p), fill=(90, 90, 96), width=5)
     if k > 0.95:
         x, y = g["exit"]
-        d.text((x - 10, oy + y + 40), "決済", font=font(F_HEAD, 40), fill=COLORS["green"], anchor="mm")
+        d.text((x - 10, oy + y + (70 if g.get("dy") else 40)), "決済", font=font(F_HEAD, 40), fill=COLORS["green"], anchor="mm")
     d.text((W - 40, oy + PANEL_H - 40), "模式図", font=font(F_TAG, 32), fill=(90, 96, 104), anchor="rm")
 
 
@@ -486,7 +552,9 @@ def main():
     ap.add_argument("--out")
     a = ap.parse_args()
     sc = json.load(open(a.script, encoding="utf-8"))
-    global FPS, F_HEAD, F_CAP, F_TAG
+    global FPS, F_HEAD, F_CAP, F_TAG, BG, PANEL_Y
+    PANEL_Y = sc.get("panel_y", PANEL_Y)
+    BG = tuple(sc.get("bg", BG))
     FPS = sc.get("fps", FPS)
     F_HEAD = os.path.join(HERE, "fonts", sc["font_head"]) if "font_head" in sc else F_HEAD
     F_CAP = os.path.join(HERE, "fonts", sc["font_cap"]) if "font_cap" in sc else F_CAP

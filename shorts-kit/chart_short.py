@@ -339,7 +339,7 @@ def _traced():
         "path": [T(*p) for p in path], "ribbon_fast": [T(*p) for p in fast], "ribbon_slow": [T(*p) for p in slow],
         "line": (T(928, 145), T(997, 265)), "entry": T(970, 218), "stop": (T(950, 0)[0], T(1010, 0)[0], T(0, 252)[1]),
         "channel": ((T(928, 280), T(1118, 92)), (T(930, 158), T(1045, 70))), "exit": T(1105, 103),
-        "ribbon": True, "exit_dy": 60, "labels_below": True,
+        "ribbon": True, "exit_dy": 60, "labels_below": True, "follow_path": True,
     }
 
 
@@ -525,32 +525,44 @@ def draw_diagram(im, name, t, dur):
         d = ImageDraw.Draw(im)
     if len(pts) > 1:
         d.line(pts, fill=INK, width=8, joint="curve")
-    if k > 0.5:     # 押し目の切り下げライン
+    x_now = pts[-1][0] if pts else 0
+    done = poly_part(g["path"], (k - 0.1) / 0.75)[-1] == g["path"][-1]
+
+    def due(k0, x_at, span=0.1):
+        """線や印を出すか(0〜1)。follow_path の図は、値動きの線がその x まで来てから出す。"""
+        if g.get("follow_path"):
+            return 1.0 if done else min(1.0, max(0.0, (x_now - x_at) / 60))
+        return min(1.0, max(0.0, (k - k0) / span)) if k > k0 else 0.0
+
+    p = due(0.5, g["line"][0][0], 0.12)
+    if p > 0:       # 押し目の切り下げライン
         (x0, y0), (x1, y1) = g["line"]
-        p = ease((k - 0.5) / 0.12)
+        p = ease(p)
         d.line((x0, oy + y0, x0 + (x1 - x0) * p, oy + y0 + (y1 - y0) * p), fill=(90, 90, 96), width=6)
-    if "stop" in g and k > 0.66:   # 損切り(押し目の下)
+    p = due(0.66, g["entry"][0], 0.08) if "stop" in g else 0
+    if p > 0:       # 損切り(押し目の下)
         sx0, sx1, sy = g["stop"]
-        p = ease((k - 0.66) / 0.08)
+        p = ease(p)
         xx = sx0
         while xx < sx0 + (sx1 - sx0) * p:
             d.line((xx, oy + sy, min(xx + 14, sx1), oy + sy), fill=COLORS["red"], width=5)
             xx += 24
         if p >= 1:
             d.text((sx1 + 10, oy + sy), "損切り", font=font(F_HEAD, 36), fill=COLORS["red"], anchor="lm")
-    if k > 0.62:
+    if due(0.62, g["entry"][0], 0.06) > 0:
         x, y = g["entry"]
-        r = 16 * ease((k - 0.62) / 0.06)
+        r = 16 * ease(due(0.62, g["entry"][0], 0.06))
         d.ellipse((x - r, oy + y - r, x + r, oy + y + r), fill=COLORS["blue"], outline=(255, 255, 255), width=4)
         if g.get("dy"):    # 新しい図: 点の右下に置く(左はレンジを延ばした破線と重なる)
             d.text((x + 40, oy + y + 12), "エントリー", font=font(F_HEAD, 38), fill=COLORS["blue"], anchor="lm")
         else:
             d.text((x - 30, oy + y + 70), "エントリー", font=font(F_HEAD, 38), fill=COLORS["blue"], anchor="rm")
-    if k > 0.72:
-        p = ease((k - 0.72) / 0.12)
+    p = due(0.72, g["channel"][0][0][0], 0.12)
+    if p > 0:
+        p = ease(p)
         for (x0, y0), (x1, y1) in g["channel"]:
             d.line((x0, oy + y0, x0 + (x1 - x0) * p, oy + y0 + (y1 - y0) * p), fill=(90, 90, 96), width=5)
-    if k > 0.95:
+    if (done if g.get("follow_path") else k > 0.95):
         x, y = g["exit"]
         d.text((x - 10, oy + y + g.get("exit_dy", 70 if g.get("dy") else 40)), "決済", font=font(F_HEAD, 40), fill=COLORS["green"], anchor="mm")
     d.text((W - 40, oy + PANEL_H - 40), "模式図", font=font(F_TAG, 32), fill=(90, 96, 104), anchor="rm")

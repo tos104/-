@@ -130,3 +130,35 @@ FX,FX初心者,ドル円,USDJPY,15分足,レンジブレイク,押し目,移動�
 - タイトル・説明文・ハッシュタグの字数と表示: [hashtagtools.io(文字数)](https://hashtagtools.io/blog/youtube-shorts-character-limits-title-description-hashtags-2026)、[hashtagtools.io(タイトルと説明文)](https://hashtagtools.io/blog/youtube-shorts-hashtags-title-vs-description-2026)、[vaizle](https://insights.vaizle.com/best-hashtags-for-youtube-shorts/)、[MiniTool](https://youtubedownload.minitool.com/jp/youtube/youtube-hashtags.html)、[Klap](https://klap.app/briefs/mastering-youtube-hashtags-for-impact)
 - 金融商品取引法と SNS: [金融庁(2024-11 公表資料)](https://www.fsa.go.jp/news/r6/shouken/20241122-2/01.pdf)、[金融庁「無登録業者・不正な勧誘」](https://www.fsa.go.jp/ordinary/chuui/husyouseikanyuu.html)、[消費者庁 注意喚起](https://www.caa.go.jp/policies/policy/consumer_policy/caution/caution_034)
 - チャンネルの既存ショートのタイトル: ユーザー共有のスクリーンショット(2026-10-27)
+
+## 確定版(ユーザー決定 2026-10-28・案 A をもとにユーザーが編集)
+
+```
+【タイトル】
+レンジブレイク、抜けた瞬間に買うと負ける理由【ドル円15分足】
+
+【説明文】
+レンジ(一定の幅で上下している状態)を上に抜けた瞬間に飛び乗って、すぐ戻された経験はありませんか？
+▶ 元の解説動画(全編)は、画面下の「関連動画」からどうぞ。手法解説をしています。
+
+待てる人は、この順番で確かめてから入ります👇
+① 短期のリボンごとレンジを抜けたか
+ローソク足だけが一瞬抜けても待つ
+② 押し目をつけたか
+上がった後の一時的な下げ。レンジの上の線まで戻ることが多い
+③ 押し目でできた切り下げラインを上に抜けたらエントリー
+損切りはレンジの上の線の少し下
+④ 決済は、上がっていく2本の平行な線(トレンドチャネル)の中で伸ばし、外れたら決済
+
+【動画の色の帯(MAribbon)】
+移動平均線(過去の値段の平均を結んだ線)を2本ずつ組にして、間を色で塗った帯です。
+・短期ribbon(20SMA×40SMA):上向きは赤、下向きは青
+・長期ribbon(75EMA×200本SMA):上向きは黄、下向きは緑
+帯の向きと色で「今どちらに流れているか」、帯がレンジを抜けたかで「本当に抜けたか」を見ます。
+
+形が揃うまで、待つ。
+
+※2026/10/19〜20 のドル円15分足を使った過去例です。教育目的であり、金融・投資助言ではありません。将来の値動きや成果を保証するものではありません。取引判断はご自身で行ってください。
+
+#FX #ドル円 #FX初心者
+```

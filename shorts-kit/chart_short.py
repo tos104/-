@@ -325,7 +325,7 @@ DIAGRAMS = {
                  (620, 330), (660, 370), (690, 350), (730, 455), (790, 370), (850, 300), (880, 320), (940, 230),
                  (980, 250), (1030, 170), (1050, 250)],
         "line": ((600, 320), (800, 420)), "entry": (766, 403), "stop": (690, 790, 480),
-        "channel": (((790, 383), (1060, 194)), ((790, 323), (1060, 134))), "exit": (1040, 208),
+        "channel": (((790, 383), (1060, 194)), ((790, 323), (1060, 134))), "exit": (1040, 208), "ribbon": True,
     },
     # レンジ → リボンごと上抜け → 押し目に切り下げライン → 抜けてエントリー → チャネル → 割れて決済(形だけ。価格ではない)
     "range_pullback_line": {
@@ -337,6 +337,42 @@ DIAGRAMS = {
         "channel": (((790, 400), (1060, 160)), ((760, 330), (1040, 80))), "exit": (1040, 300),
     }
 }
+
+
+def ribbon_lines(g):
+    """模式図の値動き(折れ線)から、短期リボンの 2 本(遅れて追う移動平均)を作る。"""
+    xs = np.arange(g["path"][0][0], g["path"][-1][0] + 1, 4)
+    ys = np.interp(xs, [p[0] for p in g["path"]], [p[1] for p in g["path"]])
+    def ma(n):     # 直近 n 点の平均(過去だけを見る)
+        c = np.cumsum(np.insert(ys, 0, 0))
+        return np.array([(c[i + 1] - c[max(0, i + 1 - n)]) / (i + 1 - max(0, i + 1 - n)) for i in range(len(ys))])
+    return xs, ma(14), ma(28)
+
+
+def draw_ribbon(im, g, x_now, oy, k):
+    """短期リボン(帯)を、値動きが描けている所まで描く。上辺を抜けた所に丸と「リボンが抜ける」。"""
+    xs, fast, slow = ribbon_lines(g)
+    n = int(np.searchsorted(xs, x_now))
+    if n < 2:
+        return
+    layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    dl = ImageDraw.Draw(layer)
+    top = g["box"][1]
+    for i in range(n - 1):     # 上向き(速い線が上)は赤、それ以外は青で帯を塗る
+        up = fast[i] < slow[i]
+        col = (220, 70, 60) if up else (60, 110, 200)
+        dl.polygon([(xs[i], oy + fast[i]), (xs[i + 1], oy + fast[i + 1]), (xs[i + 1], oy + slow[i + 1]),
+                    (xs[i], oy + slow[i])], fill=col + (70,))
+    dl.line([(x, oy + y) for x, y in zip(xs[:n], fast[:n])], fill=(220, 70, 60, 255), width=5)
+    dl.line([(x, oy + y) for x, y in zip(xs[:n], slow[:n])], fill=(60, 110, 200, 255), width=5)
+    out = [i for i in range(n) if xs[i] > g["box"][2] and max(fast[i], slow[i]) < top]
+    if out:                    # 帯ごとレンジ上辺を抜けた最初の所
+        i = out[0]
+        cx, cy = xs[i], oy + (fast[i] + slow[i]) / 2
+        dl.ellipse((cx - 44, cy - 44, cx + 44, cy + 44), outline=COLORS["red"] + (255,), width=7)
+        dl.multiline_text((cx - 52, cy + 10), "リボンが\nレンジを抜ける", font=font(F_HEAD, 34), fill=COLORS["red"] + (255,),
+                          anchor="rd", align="right", stroke_width=5, stroke_fill=BG + (255,))
+    im.paste(layer, (0, 0), layer)
 
 
 def draw_diagram(im, name, t, dur):
@@ -359,6 +395,9 @@ def draw_diagram(im, name, t, dur):
         d.rectangle((bx0, oy + by0, bx0 + (bx1 - bx0) * bk, oy + by1), fill=(198, 216, 236), outline=COLORS["blue"], width=5)
         d.text((bx0 + 12, oy + by0 - 52), "レンジ", font=font(F_HEAD, 40), fill=COLORS["blue"])
     pts = [(x, oy + y) for x, y in poly_part(g["path"], (k - 0.1) / 0.75)]
+    if g.get("ribbon") and len(pts) > 1:
+        draw_ribbon(im, g, pts[-1][0], oy, k)
+        d = ImageDraw.Draw(im)
     if len(pts) > 1:
         d.line(pts, fill=INK, width=8, joint="curve")
     if k > 0.5:     # 押し目の切り下げライン

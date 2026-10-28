@@ -34,7 +34,7 @@
                  {"type": "hline", "x": 1095, "x2": 1140, "y": 298, "t": 1.5, "color": "red", "text": "損切り"}],  # 破線
      "reveal": {"x": [780, 870], "box": [300, 351, 1211]},   # rec の絵を左から x まで出していく(リアルタイムに見せる)。box は先に引いてあるボックスを右側にも描く
      "punch": [1.4],                                  # その秒にカメラが一瞬寄る(決め手の場面)
-     "sfx": [["pop", 1.4, 0.5]]},                     # 効果音(se.py の名前, カット内の秒, 音量)。台本に "sfx" がなければ無音
+     "sfx": [["pop", 1.4, 0.5]]},                     # 効果音(se.py の名前, カット内の秒, 音量)。台本に "sfx" がなければ無音。台本の "loudness": {"peak_dbtp": -1} で全体のピークをそろえる
     {"diagram": "range_pullback_line", "dur": 3.0},  # 模式図(手順の形を線で描く。実際の価格ではない)
     {"card": "免責などの全文", "dur": 2.0}            # チャートなしで文字だけ
   ]
@@ -318,9 +318,10 @@ def poly_part(pts, k):
     return out
 
 
-def _traced():
-    """録画 0.5 秒(10/20 5:59)の全体チャートをなぞった図。座標は録画の画素で読み取り、帯の座標へ写す。"""
-    T = lambda x, y: (round(40 + (x - 395) * 1.42), round(60 + (y - 60) * 1.9))
+def _traced(scale=1.0):
+    """録画 0.5 秒(10/20 5:59)の全体チャートをなぞった図。座標は録画の画素で読み取り、帯の座標へ写す。
+    scale < 1 で左に寄せて縮める(右側のショートのアイコンを避ける)。"""
+    T = lambda x, y: (round(40 + (x - 395) * 1.42 * scale), round(60 + (y - 60) * 1.9 * scale))
     path = [(400, 230), (410, 213), (440, 290), (453, 317), (475, 300), (520, 257), (540, 300), (563, 327),
             (580, 250), (597, 300), (610, 262), (630, 330), (640, 315), (663, 165), (690, 270), (705, 262),
             (733, 307), (745, 330), (767, 320), (785, 370), (800, 263), (813, 310), (830, 243), (870, 235),
@@ -340,10 +341,87 @@ def _traced():
         "line": (T(928, 145), T(997, 265)), "entry": T(970, 218), "stop": (T(950, 0)[0], T(1010, 0)[0], T(0, 252)[1]),
         "channel": ((T(928, 280), T(1118, 92)), (T(930, 158), T(1045, 70))), "exit": T(1105, 103),
         "ribbon": True, "exit_dy": 60, "labels_below": True, "follow_path": True,
+        "X": lambda x: T(x, 0)[0],
     }
 
 
-DIAGRAMS_EXTRA = {"traced": _traced}
+DIAGRAMS_EXTRA = {"traced": _traced, "traced_small": lambda: _traced(0.78)}
+
+# まとめの図を 1 段階ずつ見せる(ユーザー指定 2026-10-28)。x は録画の画素。各段階: 名前・開始秒・値動きを描き終える秒・止める秒
+STAGES = [
+    ("① レンジ", 0.0, 1.4, 400, 880),
+    ("② リボンがレンジを抜ける", 1.8, 2.8, 880, 965),
+    ("③ 押し目に切り下げライン", 4.0, 4.0, 965, 965),
+    ("④ ライン抜けでエントリー", 4.8, 5.1, 965, 975),
+    ("⑤ トレンドチャネルで決済", 6.3, 7.7, 975, 1110),
+]
+
+
+def clip_path_x(path, x):
+    """折れ線を x までで切る。"""
+    out = [path[0]]
+    for a, b in zip(path, path[1:]):
+        if b[0] <= x:
+            out.append(b)
+        else:
+            if a[0] < x:
+                out.append((x, a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0])))
+            break
+    return out
+
+
+def draw_staged(im, t, dur, scale=0.78):
+    """なぞった図を段階ごとに描き、各段階の終わりで止める。段階の名前を図の上に出す。"""
+    g = _traced(scale)
+    X = g["X"]
+    oy = PANEL_Y + 415          # 縦書き(上から y≈972 まで)の下に置く
+    d = ImageDraw.Draw(im)
+    st = max(i for i, s_ in enumerate(STAGES) if t >= s_[1])
+    name, t0, t1, xa, xb = STAGES[st]
+    x_now = X(xa) + (X(xb) - X(xa)) * (ease_io((t - t0) / (t1 - t0)) if t1 > t0 else 1.0)
+    bx0, by0, bx1, by1 = g["box"]
+    bk = ease(t / 0.4)
+    d.rectangle((bx0, oy + by0, bx0 + (bx1 - bx0) * bk, oy + by1), fill=(198, 216, 236), outline=COLORS["blue"], width=5)
+    d.text((bx0 + 12, oy + by1 + 16), "レンジ", font=font(F_HEAD, 38), fill=COLORS["blue"])
+    draw_ribbon(im, g, x_now, oy, 1.0)
+    d = ImageDraw.Draw(im)
+    pts = [(x, oy + y) for x, y in clip_path_x(g["path"], x_now)]
+    if len(pts) > 1:
+        d.line(pts, fill=INK, width=7, joint="curve")
+    if st >= 2:     # 切り下げライン
+        (x0, y0), (x1, y1) = g["line"]
+        p = ease((t - STAGES[2][1]) / 0.5)
+        d.line((x0, oy + y0, x0 + (x1 - x0) * p, oy + y0 + (y1 - y0) * p), fill=(90, 90, 96), width=6)
+    if st >= 3 and x_now >= g["entry"][0] - 1:   # エントリーと損切り
+        x, y = g["entry"]
+        p = ease((t - STAGES[3][2]) / 0.2)
+        r = 15 * p
+        d.ellipse((x - r, oy + y - r, x + r, oy + y + r), fill=COLORS["blue"], outline=(255, 255, 255), width=4)
+        d.text((x + 34, oy + y - 4), "エントリー", font=font(F_HEAD, 34), fill=COLORS["blue"], anchor="lm",
+               stroke_width=5, stroke_fill=BG)
+        sx0, sx1, sy = g["stop"]
+        xx = sx0
+        while xx < sx0 + (sx1 - sx0) * p:
+            d.line((xx, oy + sy, min(xx + 14, sx1), oy + sy), fill=COLORS["red"], width=5)
+            xx += 24
+        if p >= 1:
+            d.text((sx1 + 10, oy + sy), "損切り", font=font(F_HEAD, 32), fill=COLORS["red"], anchor="lm")
+    if st >= 4:     # トレンドチャネル
+        p = ease((t - STAGES[4][1]) / 0.4)
+        for (x0, y0), (x1, y1) in g["channel"]:
+            d.line((x0, oy + y0, x0 + (x1 - x0) * p, oy + y0 + (y1 - y0) * p), fill=(90, 90, 96), width=5)
+    if t >= STAGES[4][2]:
+        x, y = g["exit"]
+        d.text((x, oy + y + 50), "決済", font=font(F_HEAD, 38), fill=COLORS["green"], anchor="mm",
+               stroke_width=5, stroke_fill=BG)
+    # 段階の名前(図の右上。前の段階から切り替わるとき下から入る)
+    p = ease((t - STAGES[st][1]) / 0.25)
+    layer = Image.new("RGBA", (W, 90), (0, 0, 0, 0))
+    ImageDraw.Draw(layer).text((50, 45 + 20 * (1 - p)), name, font=font(F_HEAD, 44), anchor="lm",
+                               fill=INK + (int(255 * p),))
+    im.paste(layer, (0, oy + 70), layer)     # 図の左上(レンジより上の空いた所)
+    d = ImageDraw.Draw(im)
+    d.text((W - 220, oy + by1 + 110), "模式図", font=font(F_TAG, 30), fill=(90, 96, 104), anchor="rm")
 DIAGRAMS = {
     # 最初の図解(range_pullback_line)のレンジを右へ延ばし、押し目がレンジ上辺まで戻ってからエントリー(ユーザー指定 2026-10-28)
     "range_extended": {
@@ -498,6 +576,8 @@ def draw_sketch(im, t, dur):
 def draw_diagram(im, name, t, dur):
     if name == "sketch":
         return draw_sketch(im, t, dur)
+    if name == "staged":
+        return draw_staged(im, t, dur)
     g = DIAGRAMS_EXTRA[name]() if name in DIAGRAMS_EXTRA else DIAGRAMS[name]
     d = ImageDraw.Draw(im)
     k = t / max(dur - 0.6, 0.1)
@@ -723,7 +803,11 @@ def sfx_track(sc):
         x = se.get(name) * vol
         i = int(at * se.SR)
         mix[i:i + len(x)] += x[:len(mix) - i]
-    return mix[:int(t0 * se.SR)], se
+    mix = mix[:int(t0 * se.SR)]
+    if sc.get("loudness"):     # ピークを目標(true peak の余裕 0.5dB を見て)まで上げる/下げる。YouTube は小さい音を上げないため
+        target = 10 ** ((sc["loudness"]["peak_dbtp"] - 0.5) / 20)
+        mix = mix * target / (np.max(np.abs(mix)) or 1)
+    return mix, se
 
 
 def render(sc, charts, out):

@@ -1,0 +1,29 @@
+{
+ "assets": "../../output/fx_usdjpy_box/assets",
+ "rec_file": "replay.mov",
+ "header": "飛び乗る人 vs 待てる人",
+ "look": "vivid",
+ "fps": 60,
+ "type_cps": 24,
+ "layout": "tate",
+ "bg": [255, 255, 255],
+ "panel_y": 520,
+ "font_head": "ShipporiMincho-ExtraBold.ttf",
+ "font_cap": "ShipporiMincho-ExtraBold.ttf",
+ "font_tag": "ShipporiMincho-Medium.ttf",
+ "loudness": {"peak_dbtp": -1.0},
+ "shots": [
+  {"rec": [33.0], "reveal": {"x": [770, 868], "box": [300, 351, 1211], "until": 1.4}, "dur": 3.2, "rect": [870, 285, 400], "rect_end": [880, 285, 360], "label": "飛び乗る人", "color": "red", "tate": "レンジを\n抜けた瞬間に\n買うと…", "tate_side": "right", "type": false, "markers": [{"type": "dot", "x": 863, "y": 287, "t": 1.4, "color": "red", "text": "もし買ったら"}], "punch": [1.4], "note": "HOOK(冒頭2秒)。ボックスは引いた状態で、ローソク足を左から出していく(右側は背景にしてボックスだけ描き直す。ボックスは y300〜351・右端 x1211 を実測)。抜けた足が出た瞬間に点。日時は 16:59 の画面なので出さない", "sfx": [["pop", 1.4, 0.5]]},
+  {"rec": [33.0], "reveal": {"x": [868, 905], "box": [300, 351, 1211]}, "dur": 2.2, "rect": [880, 285, 360], "rect_end": [880, 295, 480], "mark": [897, 318], "label": "飛び乗る人", "color": "red", "tate": "すぐ\nレンジに\n戻される", "tate_side": "right", "markers": [{"type": "dot", "x": 863, "y": 287, "t": 0.0, "color": "red"}, {"type": "arrow", "x": 878, "y": 246, "x2": 897, "y2": 318, "t": 0.6, "color": "red"}], "note": "失敗の結果。続きの足を出し、ヒゲだけ抜けてボックスに戻る所に矢印と×", "sfx": [["impact", 0.45, 0.45]]},
+  {"rec": [33.0], "dur": 1.8, "rect": [880, 295, 480], "rect_end": [900, 300, 560], "rec_tag": true, "label": "待てる人", "color": "blue", "tate": "待てる人は\nここが違う", "type": false, "note": "答えの予告(ユーザー指定の文言)"},
+  {"rec": [33.0, 27.5], "dur": 2.6, "rect": [900, 300, 560], "rect_end": [880, 295, 560], "rec_tag": true, "label": "待てる人", "color": "blue", "tate": "リボンごと\nレンジを\n抜ける", "markers": [{"type": "ring", "x": 1098, "y": 298, "r": 30, "t": 2.0, "color": "red"}], "note": "16:59→20:14。短期リボン(赤・青)がボックス上限 y=300 を抜けた所(20:14・x≈1098)を丸で囲む", "sfx": [["pop", 2.0, 0.45]]},
+  {"rec": [27.5, 25.8], "dur": 1.6, "rect": [880, 295, 560], "rec_tag": true, "label": "待てる人", "color": "blue", "tate": "押し目まで\n待つ", "markers": [{"type": "ring", "x": 1098, "y": 298, "r": 30, "t": -1.0, "color": "red"}], "note": "20:14→20:44。抜けてもすぐ買わない"},
+  {"rec": [24.1], "dur": 2.2, "rect": [880, 295, 560], "rect_end": [900, 288, 500], "rec_tag": true, "trans": "wipe", "label": "待てる人", "color": "blue", "tate": "押し目に\n切り下げ\nライン", "note": "20:44。線を左から現す"},
+  {"rec": [24.1, 22.6], "dur": 3.8, "rect": [900, 288, 500], "rect_end": [1060, 282, 300], "rec_tag": true, "label": "待てる人", "color": "blue", "tate": "ラインを\n抜けたら\nエントリー", "markers": [{"type": "dot", "x": 1108, "y": 270, "t": 1.7, "color": "blue", "text": "エントリー"}, {"type": "hline", "x": 1092, "x2": 1140, "y": 306, "t": 2.1, "color": "red", "text": "損切り"}], "punch": [1.7], "note": "20:44→20:59。エントリーの点と、損切りはレンジ上限の青線(y≈300)の少し下(y306・ユーザー指定)", "sfx": [["ding", 1.7, 0.5]]},
+  {"rec": [16.75], "dur": 2.2, "rect": [920, 270, 600], "rect_end": [920, 262, 630], "rec_tag": true, "trans": "wipe", "label": "待てる人", "color": "blue", "tate": "決済は\nトレンド\nチャネル", "callouts": [[1010, 190, "トレンドチャネル", "ink"]], "note": "22:29。チャネルを左から現す"},
+  {"rec": [16.75, 3.5], "dur": 2.6, "rect": [920, 262, 630], "rect_end": [780, 200, 820], "rec_tag": true, "label": "待てる人", "color": "blue", "tate": "伸ばせるだけ\n伸ばす", "note": "22:29→翌 5:59 を早送り"},
+  {"rec": [0.5], "dur": 2.8, "rect": [780, 200, 820], "rect_end": [800, 190, 760], "rec_tag": true, "trans": "wipe", "label": "待てる人", "color": "blue", "tate": "チャネル抜けで\n決済", "callouts": [[1075, 76, "決済", "green"], [1065, 176, "エントリー", "blue"], [1065, 275, "損切り", "red"]], "punch": [0.9], "note": "5:59。実際の決済(チャネル割れ)。書籍 p.196 の基本は上限タッチ(ユーザー判断で文言はチャネル抜け)", "sfx": [["kira", 0.9, 0.35]]},
+  {"diagram": "staged", "dur": 8.6, "label": "まとめ", "color": "ink", "tate": "形が\n揃うまで\n待つ", "type": false, "note": "模式図。実際のチャート(10/20 5:59)をなぞり、0.78 倍に縮めて左へ寄せる(右側のショートのアイコンを避ける)。① レンジ → ② リボン抜け(止める) → ③ 切り下げライン → ④ エントリー・損切り(止める) → ⑤ チャネルで決済 の順に 1 段階ずつ"},
+  {"card": "教育目的であり、金融・投資助言ではありません。取引判断はご自身で行ってください。", "dur": 2.0, "cta": "保存して、次のチャートで試す", "note": "保存の呼びかけ+免責(資料§24)。チャート下の常時の注記はユーザー指定で削除"}
+ ]
+}

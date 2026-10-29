@@ -221,12 +221,19 @@ def layer_D2(b):
     for k, (a, v) in enumerate(rows):
         y = py0 + 195 * s + 84 * s * k
         d.text((px0 + 40, y), a, font=font("xb", int(44 * s)), fill=(40, 40, 40), anchor="lm")
-        d.text((px1 - 40, y), v, font=font("dela", int(50 * s)), fill=(200, 40, 50) if v.startswith("ARS") else (40, 40, 40), anchor="rm")
+        unk = v.startswith("？")  # まだ分からない欄は赤く大きく
+        d.text((px1 - 40, y), v, font=font("dela", int((70 if unk else 50) * s)), fill=(200, 40, 50) if v.startswith("ARS") or unk else (40, 40, 40), anchor="rm")
     if tx.get("total"):
         y = py1 - 95 * s
         d.line((px0 + 30, y - 55 * s, px1 - 30, y - 55 * s), fill=(40, 40, 40), width=4)
         d.text((px0 + 40, y), tx["total"][0], font=font("dela", int(54 * s)), fill=(40, 40, 40), anchor="lm")
         d.text((px1 - 40, y), tx["total"][1], font=font("dela", int(68 * s)), fill=(200, 40, 50), anchor="rm")
+    if tx.get("buy") is not None:  # 「買う？見送る？」の選択(-1=どちらも未選択)
+        by = py1 + 60
+        for k, (t, col) in enumerate([("買う", (220, 40, 50)), ("見送る", (60, 90, 160))]):
+            x0 = 110 + k * 450; on = tx["buy"] == k
+            d.rounded_rectangle((x0, by, x0 + 410, by + 140), radius=30, fill=col if on else (255, 255, 255), outline=col, width=10)
+            d.text((x0 + 205, by + 70), t, font=font("dela", 68), fill=(255, 255, 255) if on else col, anchor="mm")
     if tx.get("cta"):  # 関連動画への案内(レシートの下・YouTube の表示より上)
         a, pill = tx["cta"]
         y = py1 + 50

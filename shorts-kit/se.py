@@ -102,6 +102,53 @@ def riser(dur=1.0):
     return _norm((tone * 0.6 + air * 0.5) * (t / dur) ** 2, 0.5)
 
 
+def bgm(dur, bpm=84, seed=3):
+    """控えめな BGM(合成・外部素材なし)。Am7 → Fmaj7 → Cmaj7 → G6 の繰り返し。
+    やわらかいパッド + ゆっくりの分散和音 + 低いベース + 小さなキックとシェイカー。最初と最後は音量を絞る。"""
+    r = np.random.default_rng(seed)
+    t = _t(dur)
+    beat = 60 / bpm
+    bar = beat * 4
+    chords = [[57, 60, 64, 67], [53, 57, 60, 64], [48, 55, 59, 64], [55, 59, 62, 64]]   # MIDI 番号
+    hz = lambda m: 440 * 2 ** ((m - 69) / 12)
+    out = np.zeros_like(t)
+    n_bars = int(np.ceil(dur / bar))
+    for b_ in range(n_bars):
+        ch = chords[b_ % 4]
+        t0 = b_ * bar
+        i0, i1 = int(t0 * SR), min(len(t), int((t0 + bar + 0.3) * SR))
+        tt = t[i0:i1] - t0
+        env = np.minimum(1, tt / 0.5) * np.exp(-np.maximum(0, tt - bar) * 8)
+        pad = sum(np.sin(2 * np.pi * hz(m) * tt) + 0.3 * np.sin(2 * np.pi * 2 * hz(m) * tt + 0.3) for m in ch)
+        out[i0:i1] += 0.06 * pad * env
+        bass = np.sin(2 * np.pi * hz(ch[0] - 24) * tt) * np.minimum(1, tt / 0.05) * np.exp(-tt * 0.9)
+        out[i0:i1] += 0.22 * bass
+        for k in range(8):                     # 8 分音符の分散和音
+            ts = t0 + k * beat / 2
+            m = ch[[0, 2, 1, 3, 2, 1, 3, 2][k]] + 12
+            j0 = int(ts * SR)
+            if j0 >= len(t):
+                break
+            n = min(int(0.6 * SR), len(t) - j0)
+            u = np.arange(n) / SR
+            out[j0:j0 + n] += 0.05 * np.sin(2 * np.pi * hz(m) * u) * np.exp(-u * 6) * (0.8 + 0.2 * r.random())
+        for k in range(4):                     # キック(1・3 拍)とシェイカー(裏拍)
+            ts = t0 + k * beat
+            j0 = int(ts * SR)
+            if j0 >= len(t):
+                break
+            if k in (0, 2):
+                n = min(int(0.25 * SR), len(t) - j0)
+                u = np.arange(n) / SR
+                out[j0:j0 + n] += 0.25 * np.sin(2 * np.pi * (45 + 60 * np.exp(-u * 30)) * u) * np.exp(-u * 14)
+            j1 = int((ts + beat / 2) * SR)
+            if j1 < len(t):
+                n = min(int(0.06 * SR), len(t) - j1)
+                out[j1:j1 + n] += 0.03 * _lowpass(r.standard_normal(n), 7000) * np.exp(-np.arange(n) / SR * 60)
+    fade = np.minimum(1, np.minimum(t / 0.8, (dur - t) / 1.5))
+    return _norm(out * np.clip(fade, 0, 1), 0.5)
+
+
 SOUNDS = {"logo": logo, "riser": riser, "whoosh": whoosh, "pop": pop, "impact": impact, "kira": kira, "drumroll": drumroll, "ding": ding}
 
 

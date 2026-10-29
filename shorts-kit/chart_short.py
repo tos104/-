@@ -373,7 +373,8 @@ def clip_path_x(path, x):
 
 
 def draw_staged(im, t, dur, scale=0.78):
-    """なぞった図を段階ごとに描き、各段階の終わりで止める。段階の名前を図の上に出す。"""
+    """なぞった図を段階ごとに描き、各段階の終わりで止める。段階の名前を図の上に出す。
+    各段階の開始秒は台本の "stage_starts" で変えられる(読み上げの長さに合わせる)。"""
     g = _traced(scale)
     X = g["X"]
     oy = PANEL_Y + 415          # 縦書き(上から y≈972 まで)の下に置く
@@ -580,6 +581,15 @@ def draw_diagram(im, name, t, dur):
         return draw_sketch(im, t, dur)
     if name == "staged":
         return draw_staged(im, t, dur)
+    if name.startswith("staged:"):           # "staged:0,1.8,3.6,5.6,7.3" = 各段階の開始秒
+        starts = [float(v) for v in name.split(":")[1].split(",")]
+        global STAGES
+        base = STAGES
+        STAGES = [(nm, s0, s0 + (t1 - t0), xa, xb) for (nm, t0, t1, xa, xb), s0 in zip(base, starts)]
+        try:
+            return draw_staged(im, t, dur)
+        finally:
+            STAGES = base
     g = DIAGRAMS_EXTRA[name]() if name in DIAGRAMS_EXTRA else DIAGRAMS[name]
     d = ImageDraw.Draw(im)
     k = t / max(dur - 0.6, 0.1)
@@ -791,22 +801,48 @@ def board(sc, charts, out):
 
 
 def sfx_track(sc):
-    """各カットの "sfx" を 1 本の音声にまとめる(se.py で合成。外部素材なし)。なければ None。"""
-    events, t0 = [], 0.0
+    """各カットの "sfx"(効果音)・"say"(読み上げ)と台本の "bgm" を 1 本の音声にまとめる(すべて合成。外部素材なし)。
+    "say": [["文", カット内の秒], ...]。読み上げの間は BGM を下げる。何もなければ None。"""
+    events, says, t0 = [], [], 0.0
     for s in sc["shots"]:
         for name, at, vol in s.get("sfx", []):
             events.append((t0 + at, name, vol))
+        for text, at in s.get("say", []):
+            says.append((t0 + at, text))
         t0 += s["dur"]
-    if not events:
+    if not events and not says and not sc.get("bgm"):
         return None
     import se
-    mix = np.zeros(int((t0 + 1.5) * se.SR))
+    n_all = int((t0 + 1.5) * se.SR)
+    mix = np.zeros(n_all)
     for at, name, vol in events:
         x = se.get(name) * vol
         i = int(at * se.SR)
         mix[i:i + len(x)] += x[:len(mix) - i]
+    voice = np.zeros(n_all)
+    if says:
+        import narr_short
+        assert narr_short.SR == se.SR
+        speed = sc.get("say_speed", 1.25)
+        for at, text in says:
+            x = narr_short.tts(text, speed).astype(np.float64) / 32768
+            i = int(at * se.SR)
+            voice[i:i + len(x)] += x[:n_all - i]
+        voice = voice / (np.max(np.abs(voice)) or 1) * 0.9
+    if sc.get("bgm"):
+        music = se.bgm(t0, sc["bgm"].get("bpm", 84)) * sc["bgm"].get("vol", 0.25)
+        music = np.concatenate([music, np.zeros(n_all - len(music))])
+        # 読み上げの間は BGM を下げる(前後 0.15 秒なめらかに)
+        talk = (np.abs(voice) > 0.01).astype(float)
+        w = int(0.15 * se.SR)
+        talk = np.convolve(talk, np.ones(2 * w) / (2 * w), mode="same") > 0
+        gain = np.where(talk, sc["bgm"].get("duck", 0.4), 1.0)
+        gain = np.convolve(gain, np.ones(w) / w, mode="same")
+        mix += music * gain
+    mix += voice
     mix = mix[:int(t0 * se.SR)]
-    if sc.get("loudness"):     # ピークを目標(true peak の余裕 0.5dB を見て)まで上げる/下げる。YouTube は小さい音を上げないため
+    if sc.get("loudness", {}).get("peak_dbtp") is not None and "lufs" not in sc["loudness"]:
+        # ピークを目標(true peak の余裕 0.5dB を見て)まで上げる/下げる。YouTube は小さい音を上げないため
         target = 10 ** ((sc["loudness"]["peak_dbtp"] - 0.5) / 20)
         mix = mix * target / (np.max(np.abs(mix)) or 1)
     return mix, se
@@ -828,8 +864,13 @@ def render(sc, charts, out):
         mix, se = track
         wav = out + ".sfx.wav"
         se.write_wav(wav, mix)
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", video, "-i", wav, "-c:v", "copy", "-c:a", "aac",
-                        "-b:a", "192k", "-shortest", "-movflags", "+faststart", out], check=True)
+        af = []
+        if "lufs" in sc.get("loudness", {}):   # 統合ラウドネスを目標に合わせる(YouTube の目安 -14 LUFS・true peak -1 dBTP)
+            L = sc["loudness"]
+            af = ["-af", f"loudnorm=I={L['lufs']}:TP={L.get('peak_dbtp', -1.0)}:LRA=11"]
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", video, "-i", wav, "-c:v", "copy"] + af +
+                       ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest", "-movflags", "+faststart", out],
+                       check=True)
         os.remove(video)
         os.remove(wav)
     print(out)

@@ -191,7 +191,7 @@ def layer_E(b):
 
 # ---- D2: レシート改(元動画は横幅いっぱい・拡大なし。上に続きが気になるコピー、下にレシート) ----
 VID_Y2 = 330
-REC_S = 0.62  # レシートの大きさ(下の案内を YouTube の表示より上に置くため小さくする)
+REC_S = 0.65  # レシートの大きさ(下の案内を YouTube の表示より上に置くため小さくする)
 SLIDE_T = 0.3  # 切り替えで元動画が流れる秒数
 UI_SAFE = 1536  # これより下は YouTube のタイトル・ボタンが重なる目安(画面の下から約20%)
 
@@ -205,14 +205,15 @@ def layer_D2(b, t=None):
     f = font("dela", 96)
     while d.textlength(l2, font=f) > W - 80:
         f = font("dela", f.size - 4)
-    ctext(d, (W / 2, 240), l2, f, (255, 220, 60), 8)
+    ctext(d, (W / 2, 240 if l1 else 195), l2, f, (255, 220, 60), 8)  # 1行だけのときは上の枠の中央に
     vh = W * 9 // 16
     d.rectangle((0, VID_Y2 - 6, W, VID_Y2), fill=(255, 255, 255)); d.rectangle((0, VID_Y2 + vh, W, VID_Y2 + vh + 6), fill=(255, 255, 255))
     s = REC_S
     half = (W - 240) * (0.5 + s) / 2 / 1.0 * 0.82
     px0, px1, py0 = W / 2 - half, W / 2 + half, VID_Y2 + vh + 24
     rows = tx.get("rows", [])
-    py1 = py0 + 200 * s + 84 * s * len(rows) + (150 * s if tx.get("total") else 0)
+    nrow = max(len(rows), tx.get("min_rows", 0))  # 区切りごとにレシートの大きさが変わらないよう行数をそろえる
+    py1 = py0 + 200 * s + 84 * s * nrow + (150 * s if tx.get("total") else 0)
     d.rectangle((px0, py0, px1, py1), fill=(252, 251, 246))
     nz = max(1, int((px1 - px0) // 24)); zw = (px1 - px0) / nz  # ギザギザは端でちょうど終わるように割る
     for k in range(nz):

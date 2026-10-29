@@ -74,13 +74,14 @@ IDEAS = [
    lambda: label(base(334.5, ["5万円で買った旧レリーフ", "10か9か、本人も知らない"], Q), "ミニマム＝この点数未満は返却", 700, (255, 235, 60)),
    lambda: base(335.0, ["5万円で買った旧レリーフ", "10か9か、本人も知らない"], Q)]),
 ]
-for key, name, how, voice, frames in IDEAS:
-    ims = [f().resize((360, 640), Image.LANCZOS) for f in frames]
-    sheet = Image.new('RGB', (16 + 5 * 376, 640 + 300), 'white'); d = ImageDraw.Draw(sheet)
-    d.text((20, 16), f"導入2秒 案{key}  {name}", font=sv.font('dela', 44), fill=(30, 30, 30))
-    d.text((20, 78), "手法: " + how, font=sv.font('bold', 26), fill=(60, 60, 60))
-    d.text((20, 116), voice, font=sv.font('bold', 26), fill=(60, 60, 60))
-    for k, im in enumerate(ims):
-        x = 16 + k * 376; sheet.paste(im, (x, 170))
-        d.text((x + 6, 176), f"{k * 0.5:.1f}秒", font=sv.font('dela', 30), fill=(255, 40, 40), stroke_width=4, stroke_fill=(255, 255, 255))
-    sheet.save(f"{OUT}/hook2s_{key}.png"); print(key)
+if __name__ == "__main__":
+  for key, name, how, voice, frames in IDEAS:
+      ims = [f().resize((360, 640), Image.LANCZOS) for f in frames]
+      sheet = Image.new('RGB', (16 + 5 * 376, 640 + 300), 'white'); d = ImageDraw.Draw(sheet)
+      d.text((20, 16), f"導入2秒 案{key}  {name}", font=sv.font('dela', 44), fill=(30, 30, 30))
+      d.text((20, 78), "手法: " + how, font=sv.font('bold', 26), fill=(60, 60, 60))
+      d.text((20, 116), voice, font=sv.font('bold', 26), fill=(60, 60, 60))
+      for k, im in enumerate(ims):
+          x = 16 + k * 376; sheet.paste(im, (x, 170))
+          d.text((x + 6, 176), f"{k * 0.5:.1f}秒", font=sv.font('dela', 30), fill=(255, 40, 40), stroke_width=4, stroke_fill=(255, 255, 255))
+      sheet.save(f"{OUT}/hook2s_{key}.png"); print(key)

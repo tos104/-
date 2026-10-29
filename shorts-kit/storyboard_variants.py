@@ -190,48 +190,52 @@ def layer_E(b):
 
 
 # ---- D2: レシート改(元動画は横幅いっぱい・拡大なし。上に続きが気になるコピー、下にレシート) ----
-VID_Y2 = 380
+VID_Y2 = 330
+REC_S = 0.62  # レシートの大きさ(下の案内を YouTube の表示より上に置くため小さくする)
+UI_SAFE = 1536  # これより下は YouTube のタイトル・ボタンが重なる目安(画面の下から約20%)
+
+
 def layer_D2(b):
     tx = b["texts"]
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
     l1, l2 = tx.get("copy", ["", ""])
     if l1:
-        ctext(d, (W / 2, 175), l1, font("xb", 62), (255, 255, 255), 6)
+        ctext(d, (W / 2, 135), l1, font("xb", 62), (255, 255, 255), 6)
     f = font("dela", 96)
     while d.textlength(l2, font=f) > W - 80:
         f = font("dela", f.size - 4)
-    ctext(d, (W / 2, 285), l2, f, (255, 220, 60), 8)
+    ctext(d, (W / 2, 240), l2, f, (255, 220, 60), 8)
     vh = W * 9 // 16
     d.rectangle((0, VID_Y2 - 6, W, VID_Y2), fill=(255, 255, 255)); d.rectangle((0, VID_Y2 + vh, W, VID_Y2 + vh + 6), fill=(255, 255, 255))
-    px0, px1, py0 = 120, W - 120, VID_Y2 + vh + 40
+    s = REC_S
+    half = (W - 240) * (0.5 + s) / 2 / 1.0 * 0.82
+    px0, px1, py0 = W / 2 - half, W / 2 + half, VID_Y2 + vh + 24
     rows = tx.get("rows", [])
-    py1 = py0 + 200 + 84 * len(rows) + (150 if tx.get("total") else 0)
+    py1 = py0 + 200 * s + 84 * s * len(rows) + (150 * s if tx.get("total") else 0)
     d.rectangle((px0, py0, px1, py1), fill=(252, 251, 246))
-    for x in range(px0, px1, 30):
-        d.polygon([(x, py1), (x + 15, py1 + 22), (x + 30, py1)], fill=(252, 251, 246))
-    ctext(d, (W / 2, py0 + 60), tx.get("head", ""), font("dela", 50), (30, 30, 30))
-    ctext(d, (W / 2, py0 + 112), tx.get("sub", ""), font("bold", 30), (120, 120, 120))
-    d.line((px0 + 40, py0 + 150, px1 - 40, py0 + 150), fill=(150, 150, 150), width=3)
+    for x in range(int(px0), int(px1), 24):
+        d.polygon([(x, py1), (x + 12, py1 + 18), (x + 24, py1)], fill=(252, 251, 246))
+    ctext(d, (W / 2, py0 + 60 * s), tx.get("head", ""), font("dela", int(50 * s)), (30, 30, 30))
+    ctext(d, (W / 2, py0 + 112 * s), tx.get("sub", ""), font("bold", int(30 * s)), (120, 120, 120))
+    d.line((px0 + 30, py0 + 150 * s, px1 - 30, py0 + 150 * s), fill=(150, 150, 150), width=3)
     for k, (a, v) in enumerate(rows):
-        y = py0 + 195 + 84 * k
-        d.text((px0 + 50, y), a, font=font("xb", 44), fill=(40, 40, 40), anchor="lm")
-        d.text((px1 - 50, y), v, font=font("dela", 50), fill=(200, 40, 50) if v.startswith("ARS") else (40, 40, 40), anchor="rm")
+        y = py0 + 195 * s + 84 * s * k
+        d.text((px0 + 40, y), a, font=font("xb", int(44 * s)), fill=(40, 40, 40), anchor="lm")
+        d.text((px1 - 40, y), v, font=font("dela", int(50 * s)), fill=(200, 40, 50) if v.startswith("ARS") else (40, 40, 40), anchor="rm")
     if tx.get("total"):
-        y = py1 - 95
-        d.line((px0 + 40, y - 55, px1 - 40, y - 55), fill=(40, 40, 40), width=4)
-        d.text((px0 + 50, y), tx["total"][0], font=font("dela", 54), fill=(40, 40, 40), anchor="lm")
-        d.text((px1 - 50, y), tx["total"][1], font=font("dela", 68), fill=(200, 40, 50), anchor="rm")
-    if tx.get("cta"):  # 関連動画への案内(レシートの下に小さく)
+        y = py1 - 95 * s
+        d.line((px0 + 30, y - 55 * s, px1 - 30, y - 55 * s), fill=(40, 40, 40), width=4)
+        d.text((px0 + 40, y), tx["total"][0], font=font("dela", int(54 * s)), fill=(40, 40, 40), anchor="lm")
+        d.text((px1 - 40, y), tx["total"][1], font=font("dela", int(68 * s)), fill=(200, 40, 50), anchor="rm")
+    if tx.get("cta"):  # 関連動画への案内(レシートの下・YouTube の表示より上)
         a, pill = tx["cta"]
-        y = py1 + 70
-        ctext(d, (W / 2, y), a, font("xb", 42), (255, 255, 255), 5)
-        f = font("black", 54); tw = d.textlength(pill, font=f)
-        d.rounded_rectangle((W / 2 - tw / 2 - 40, y + 40, W / 2 + tw / 2 + 40, y + 130), radius=22, fill=(240, 192, 120))
-        ctext(d, (W / 2, y + 86), pill, f, (32, 96, 64))
-        d.polygon([(W / 2 - 34, y + 150), (W / 2 + 34, y + 150), (W / 2, y + 186)], fill=(240, 192, 120))
+        y = py1 + 50
+        ctext(d, (W / 2, y), a, font("xb", 40), (255, 255, 255), 5)
+        f = font("black", 50); tw = d.textlength(pill + " ▼", font=f)
+        d.rounded_rectangle((W / 2 - tw / 2 - 36, y + 34, W / 2 + tw / 2 + 36, y + 114), radius=22, fill=(240, 192, 120))
+        ctext(d, (W / 2, y + 74), pill + " ▼", f, (32, 96, 64))
     full = {"cx": 320, "cy": 180, "zoom": 1.0}
     return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.55), slot(b["t"], 0, VID_Y2, W, vh, full)]
-
 
 LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2}
 

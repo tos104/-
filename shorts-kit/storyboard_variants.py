@@ -8,7 +8,7 @@ plan.json: {"name", "variants": [{"key","name","structure","design",
 各案は「上に重ねる絵(RGBA)」と「元動画を流す枠(slot)」に分けて描く。静止画は枠に1コマを貼り、動画は枠に元動画を流す。
 デザインは key ごと(A 全画面 / B 上下分割 / C クイズ / D レシート / E 吹き出し)。数字・発言は設計図に書いたものだけ。
 """
-import argparse, json, os, subprocess, tempfile
+import argparse, json, math, os, subprocess, tempfile
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 import se
@@ -192,10 +192,11 @@ def layer_E(b):
 # ---- D2: レシート改(元動画は横幅いっぱい・拡大なし。上に続きが気になるコピー、下にレシート) ----
 VID_Y2 = 330
 REC_S = 0.62  # レシートの大きさ(下の案内を YouTube の表示より上に置くため小さくする)
+SLIDE_T = 0.3  # 切り替えで元動画が流れる秒数
 UI_SAFE = 1536  # これより下は YouTube のタイトル・ボタンが重なる目安(画面の下から約20%)
 
 
-def layer_D2(b):
+def layer_D2(b, t=None):
     tx = b["texts"]
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
     l1, l2 = tx.get("copy", ["", ""])
@@ -213,8 +214,10 @@ def layer_D2(b):
     rows = tx.get("rows", [])
     py1 = py0 + 200 * s + 84 * s * len(rows) + (150 * s if tx.get("total") else 0)
     d.rectangle((px0, py0, px1, py1), fill=(252, 251, 246))
-    for x in range(int(px0), int(px1), 24):
-        d.polygon([(x, py1), (x + 12, py1 + 18), (x + 24, py1)], fill=(252, 251, 246))
+    nz = max(1, int((px1 - px0) // 24)); zw = (px1 - px0) / nz  # ギザギザは端でちょうど終わるように割る
+    for k in range(nz):
+        x = px0 + k * zw
+        d.polygon([(x, py1), (x + zw / 2, py1 + 18), (x + zw, py1)], fill=(252, 251, 246))
     ctext(d, (W / 2, py0 + 60 * s), tx.get("head", ""), font("dela", int(50 * s)), (30, 30, 30))
     ctext(d, (W / 2, py0 + 112 * s), tx.get("sub", ""), font("bold", int(30 * s)), (120, 120, 120))
     d.line((px0 + 30, py0 + 150 * s, px1 - 30, py0 + 150 * s), fill=(150, 150, 150), width=3)
@@ -230,10 +233,20 @@ def layer_D2(b):
         d.text((px1 - 40, y), tx["total"][1], font=font("dela", int(68 * s)), fill=(200, 40, 50), anchor="rm")
     if tx.get("buy") is not None:  # 「買う？見送る？」の選択(-1=どちらも未選択)
         by = py1 + 60
-        for k, (t, col) in enumerate([("買う", (220, 40, 50)), ("見送る", (60, 90, 160))]):
-            x0 = 110 + k * 450; on = tx["buy"] == k
-            d.rounded_rectangle((x0, by, x0 + 410, by + 140), radius=30, fill=col if on else (255, 255, 255), outline=col, width=10)
-            d.text((x0 + 205, by + 70), t, font=font("dela", 68), fill=(255, 255, 255) if on else col, anchor="mm")
+        pops = tx.get("buy_pop", [])  # 各ボタンが一度だけ跳ねる時刻(区切りの頭からの秒)
+        for k, (lab, col) in enumerate([("買う", (220, 40, 50)), ("見送る", (60, 90, 160))]):
+            on = tx["buy"] == k
+            q = 0.0
+            if t is not None and k < len(pops):
+                u = (t - pops[k]) / 0.35
+                if 0 <= u <= 1:
+                    q = math.sin(math.pi * u)  # 0→1→0 の一山
+                    on = True
+            sc = 1 + 0.12 * q; dy = -14 * q
+            cx0, cy0 = 110 + k * 450 + 205, by + 70 + dy
+            hw, hh = 205 * sc, 70 * sc
+            d.rounded_rectangle((cx0 - hw, cy0 - hh, cx0 + hw, cy0 + hh), radius=30, fill=col if on else (255, 255, 255), outline=col, width=10)
+            d.text((cx0, cy0), lab, font=font("dela", int(68 * sc)), fill=(255, 255, 255) if on else col, anchor="mm")
     if tx.get("cta"):  # 関連動画への案内(レシートの下・YouTube の表示より上)
         a, pill = tx["cta"]
         y = py1 + 50
@@ -242,7 +255,7 @@ def layer_D2(b):
         d.rounded_rectangle((W / 2 - tw / 2 - 36, y + 34, W / 2 + tw / 2 + 36, y + 114), radius=22, fill=(240, 192, 120))
         ctext(d, (W / 2, y + 74), pill + " ▼", f, (32, 96, 64))
     full = {"cx": 320, "cy": 180, "zoom": 1.0}
-    return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.55), slot(b["t"], 0, VID_Y2, W, vh, full)]
+    return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.55), slot(b["t"], 0, VID_Y2, W, vh, full, slide=True)]
 
 LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2}
 
@@ -291,7 +304,7 @@ def render(p, v, src, out):
     src_w, src_h = rs.probe(src)
     rs.JET_MIN, rs.JET_PAD = ps.JET_MIN, ps.JET_PAD
     with tempfile.TemporaryDirectory() as td:
-        parts, audio, t = [], [], 0.0
+        parts, audio, t, prev_band = [], [], 0.0, None
         for i, b in enumerate(v["beats"]):
             voices, sfx = [], []
             for j, c in enumerate(b["cuts"]):
@@ -305,11 +318,20 @@ def render(p, v, src, out):
             n = max(1, round(len(voice) / SR * 30))
             dur = n / 30
             if i > 0:
-                sfx.insert(0, (-0.15, "whoosh"))
+                sfx.insert(0, (-0.05, "whoosh"))  # シュッは切り替えの動きと同時
             audio.append((t, voice, sfx))
-            over, slots = LAYER[v["key"]](b)
-            png = os.path.join(td, f"o{i:02d}.png"); over.save(png)
+            anim = bool(b["texts"].get("buy_pop")) and v["key"] == "D2"
+            if anim:  # 時刻ごとに描いた連番(ボタンが跳ねる)
+                for fi in range(n):
+                    LAYER[v["key"]](b, fi / 30)[0].save(os.path.join(td, f"o{i:02d}_{fi:04d}.png"))
+                over_in = ["-framerate", "30", "-i", os.path.join(td, f"o{i:02d}_%04d.png")]
+                slots = LAYER[v["key"]](b)[1]
+            else:
+                over, slots = LAYER[v["key"]](b)
+                png = os.path.join(td, f"o{i:02d}.png"); over.save(png)
+                over_in = ["-loop", "1", "-framerate", "30", "-i", png]
             args, fc, last = [], [f"color=c=black:s={W}x{H}:r=30:d={dur + 1:.3f}[base]"], "base"
+            nin = len(slots)
             for k, s in enumerate(slots):
                 args += ["-ss", f"{s['t']:.3f}", "-t", f"{dur + 0.5:.3f}", "-i", src]
                 x, y, cw, ch = crop_box(src_w, src_h, s["w"], s["h"], s["cx"], s["cy"], s["zoom"])
@@ -319,13 +341,26 @@ def render(p, v, src, out):
                 if s.get("dim"):
                     f += f",eq=brightness={-s['dim'] * 0.5:.2f}"
                 fc.append(f + f",setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=2[s{k}]")
-                fc.append(f"[{last}][s{k}]overlay={s['x']}:{s['y']}[b{k}]"); last = f"b{k}"
-            args += ["-loop", "1", "-framerate", "30", "-i", png]
-            fc.append(f"[{len(slots)}:v]format=rgba[ov];[{last}][ov]overlay=0:0,format=yuv420p")
+                if s.get("slide") and i > 0 and prev_band:  # 前の映像が右へ抜け、新しい映像が左から入る
+                    args += ["-loop", "1", "-t", f"{SLIDE_T + 0.1:.2f}", "-i", prev_band]
+                    P = f"(1-pow(1-min(t/{SLIDE_T},1),3))"
+                    fc.append(f"[{nin}:v]setpts=PTS-STARTPTS[pv{k}]")
+                    fc.append(f"[{last}][pv{k}]overlay=x='{s['w']}*{P}':y={s['y']}:eval=frame:eof_action=pass[q{k}]")
+                    fc.append(f"[q{k}][s{k}]overlay=x='-{s['w']}*(1-{P})':y={s['y']}:eval=frame[b{k}]"); last = f"b{k}"
+                    nin += 1
+                else:
+                    fc.append(f"[{last}][s{k}]overlay={s['x']}:{s['y']}[b{k}]"); last = f"b{k}"
+            args += over_in
+            fc.append(f"[{nin}:v]format=rgba[ov];[{last}][ov]overlay=0:0,format=yuv420p")
             part = os.path.join(td, f"p{i:02d}.mp4")
             subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *args, "-an", "-filter_complex", ";".join(fc),
                             "-frames:v", str(n), "-c:v", "libx264", "-crf", "17", part], check=True)
             parts.append(part)
+            band = [q for q in slots if q.get("slide")]
+            if band:  # 次の切り替え用に、この区切りの最後のコマの元動画部分を取っておく
+                prev_band = os.path.join(td, f"band{i:02d}.png")
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-sseof", "-0.1", "-i", part, "-update", "1",
+                                "-vf", f"crop={band[0]['w']}:{band[0]['h']}:0:{band[0]['y']}", prev_band], check=True)
             t += dur
         total = t
         mix = np.zeros(int((total + 0.5) * SR), np.float32)

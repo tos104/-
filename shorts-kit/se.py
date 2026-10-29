@@ -120,8 +120,8 @@ def bgm(dur, bpm=84, seed=3):
         tt = t[i0:i1] - t0
         env = np.minimum(1, tt / 0.5) * np.exp(-np.maximum(0, tt - bar) * 8)
         pad = sum(np.sin(2 * np.pi * hz(m) * tt) + 0.3 * np.sin(2 * np.pi * 2 * hz(m) * tt + 0.3) for m in ch)
-        out[i0:i1] += 0.06 * pad * env
-        bass = np.sin(2 * np.pi * hz(ch[0] - 24) * tt) * np.minimum(1, tt / 0.05) * np.exp(-tt * 0.9)
+        out[i0:i1] += 0.08 * pad * env
+        bass = np.sin(2 * np.pi * hz(ch[0] - 12) * tt)   # スマホのスピーカーでも聞こえる高さ * np.minimum(1, tt / 0.05) * np.exp(-tt * 0.9)
         out[i0:i1] += 0.22 * bass
         for k in range(8):                     # 8 分音符の分散和音
             ts = t0 + k * beat / 2
@@ -131,7 +131,7 @@ def bgm(dur, bpm=84, seed=3):
                 break
             n = min(int(0.6 * SR), len(t) - j0)
             u = np.arange(n) / SR
-            out[j0:j0 + n] += 0.05 * np.sin(2 * np.pi * hz(m) * u) * np.exp(-u * 6) * (0.8 + 0.2 * r.random())
+            out[j0:j0 + n] += 0.09 * np.sin(2 * np.pi * hz(m) * u) * np.exp(-u * 6) * (0.8 + 0.2 * r.random())
         for k in range(4):                     # キック(1・3 拍)とシェイカー(裏拍)
             ts = t0 + k * beat
             j0 = int(ts * SR)

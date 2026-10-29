@@ -800,6 +800,24 @@ def board(sc, charts, out):
     print(f"{out} ({t0:.1f}秒・{n}カット)")
 
 
+def voicevox_tts(text, speaker, speed, url, sr):
+    """VOICEVOX エンジン(ローカルで起動)で読み上げ、sr に変換して返す(float)。"""
+    import io, urllib.parse, urllib.request, wave as wv
+    q = urllib.request.urlopen(urllib.request.Request(
+        f"{url}/audio_query?" + urllib.parse.urlencode({"text": text, "speaker": speaker}), method="POST"), timeout=60)
+    query = json.loads(q.read())
+    query["speedScale"] = speed
+    query["prePhonemeLength"], query["postPhonemeLength"] = 0.05, 0.12
+    r = urllib.request.urlopen(urllib.request.Request(
+        f"{url}/synthesis?speaker={speaker}", data=json.dumps(query).encode(),
+        headers={"Content-Type": "application/json"}, method="POST"), timeout=120)
+    with wv.open(io.BytesIO(r.read())) as w:
+        src_sr = w.getframerate()
+        x = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float64) / 32768
+    n = int(len(x) * sr / src_sr)
+    return np.interp(np.arange(n) * src_sr / sr, np.arange(len(x)), x)
+
+
 def sfx_track(sc):
     """各カットの "sfx"(効果音)・"say"(読み上げ)と台本の "bgm" を 1 本の音声にまとめる(すべて合成。外部素材なし)。
     "say": [["文", カット内の秒], ...]。読み上げの間は BGM を下げる。何もなければ None。"""
@@ -821,11 +839,14 @@ def sfx_track(sc):
         mix[i:i + len(x)] += x[:len(mix) - i]
     voice = np.zeros(n_all)
     if says:
-        import narr_short
-        assert narr_short.SR == se.SR
         speed = sc.get("say_speed", 1.25)
+        vv = sc.get("voice", {})
         for at, text in says:
-            x = narr_short.tts(text, speed).astype(np.float64) / 32768
+            if vv.get("engine") == "voicevox":
+                x = voicevox_tts(text, vv["speaker"], speed, vv.get("url", "http://127.0.0.1:50021"), se.SR)
+            else:
+                import narr_short
+                x = narr_short.tts(text, speed).astype(np.float64) / 32768
             i = int(at * se.SR)
             voice[i:i + len(x)] += x[:n_all - i]
         voice = voice / (np.max(np.abs(voice)) or 1) * 0.9

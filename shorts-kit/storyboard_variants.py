@@ -221,6 +221,14 @@ def layer_D2(b):
         d.line((px0 + 40, y - 55, px1 - 40, y - 55), fill=(40, 40, 40), width=4)
         d.text((px0 + 50, y), tx["total"][0], font=font("dela", 54), fill=(40, 40, 40), anchor="lm")
         d.text((px1 - 50, y), tx["total"][1], font=font("dela", 68), fill=(200, 40, 50), anchor="rm")
+    if tx.get("cta"):  # 関連動画への案内(レシートの下に小さく)
+        a, pill = tx["cta"]
+        y = py1 + 70
+        ctext(d, (W / 2, y), a, font("xb", 42), (255, 255, 255), 5)
+        f = font("black", 54); tw = d.textlength(pill, font=f)
+        d.rounded_rectangle((W / 2 - tw / 2 - 40, y + 40, W / 2 + tw / 2 + 40, y + 130), radius=22, fill=(240, 192, 120))
+        ctext(d, (W / 2, y + 86), pill, f, (32, 96, 64))
+        d.polygon([(W / 2 - 34, y + 150), (W / 2 + 34, y + 150), (W / 2, y + 186)], fill=(240, 192, 120))
     full = {"cx": 320, "cy": 180, "zoom": 1.0}
     return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.55), slot(b["t"], 0, VID_Y2, W, vh, full)]
 

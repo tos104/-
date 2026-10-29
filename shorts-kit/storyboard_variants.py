@@ -189,7 +189,43 @@ def layer_E(b):
     return img, [slot(b["t"], W // 2 - r, 200, 2 * r, 2 * r, b)]
 
 
-LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E}
+# ---- D2: レシート改(元動画は横幅いっぱい・拡大なし。上に続きが気になるコピー、下にレシート) ----
+VID_Y2 = 380
+def layer_D2(b):
+    tx = b["texts"]
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
+    l1, l2 = tx.get("copy", ["", ""])
+    if l1:
+        ctext(d, (W / 2, 175), l1, font("xb", 62), (255, 255, 255), 6)
+    f = font("dela", 96)
+    while d.textlength(l2, font=f) > W - 80:
+        f = font("dela", f.size - 4)
+    ctext(d, (W / 2, 285), l2, f, (255, 220, 60), 8)
+    vh = W * 9 // 16
+    d.rectangle((0, VID_Y2 - 6, W, VID_Y2), fill=(255, 255, 255)); d.rectangle((0, VID_Y2 + vh, W, VID_Y2 + vh + 6), fill=(255, 255, 255))
+    px0, px1, py0 = 120, W - 120, VID_Y2 + vh + 40
+    rows = tx.get("rows", [])
+    py1 = py0 + 200 + 84 * len(rows) + (150 if tx.get("total") else 0)
+    d.rectangle((px0, py0, px1, py1), fill=(252, 251, 246))
+    for x in range(px0, px1, 30):
+        d.polygon([(x, py1), (x + 15, py1 + 22), (x + 30, py1)], fill=(252, 251, 246))
+    ctext(d, (W / 2, py0 + 60), tx.get("head", ""), font("dela", 50), (30, 30, 30))
+    ctext(d, (W / 2, py0 + 112), tx.get("sub", ""), font("bold", 30), (120, 120, 120))
+    d.line((px0 + 40, py0 + 150, px1 - 40, py0 + 150), fill=(150, 150, 150), width=3)
+    for k, (a, v) in enumerate(rows):
+        y = py0 + 195 + 84 * k
+        d.text((px0 + 50, y), a, font=font("xb", 44), fill=(40, 40, 40), anchor="lm")
+        d.text((px1 - 50, y), v, font=font("dela", 50), fill=(200, 40, 50) if v.startswith("ARS") else (40, 40, 40), anchor="rm")
+    if tx.get("total"):
+        y = py1 - 95
+        d.line((px0 + 40, y - 55, px1 - 40, y - 55), fill=(40, 40, 40), width=4)
+        d.text((px0 + 50, y), tx["total"][0], font=font("dela", 54), fill=(40, 40, 40), anchor="lm")
+        d.text((px1 - 50, y), tx["total"][1], font=font("dela", 68), fill=(200, 40, 50), anchor="rm")
+    full = {"cx": 320, "cy": 180, "zoom": 1.0}
+    return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.55), slot(b["t"], 0, VID_Y2, W, vh, full)]
+
+
+LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2}
 
 
 def still(src, key, b):

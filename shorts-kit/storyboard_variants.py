@@ -366,7 +366,8 @@ def render(p, v, src, out):
                 a0, a1 = to_sec(c["a"][0]), to_sec(c["a"][1])
                 spans = ps.voice_spans(src, a0, a1) if c.get("jet", True) else [(a0, a1)]
                 at = sum(len(x) for x in voices) / SR
-                voices.append(np.concatenate([rs.source_audio(src, s0, s1) for s0, s1 in spans]))
+                v_ = np.concatenate([rs.source_audio(src, s0, s1) for s0, s1 in spans])
+                voices.append(np.zeros_like(v_) if c.get("mute") else v_)  # mute: 映像だけ使い、声は入れない(倍率の連打など)
                 if c.get("se"):
                     sfx.append((at, c["se"]))
             voice = np.concatenate(voices)

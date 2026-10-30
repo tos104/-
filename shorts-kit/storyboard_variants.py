@@ -342,7 +342,9 @@ def intro_frame(path, fi, n, copy=None):
             while d.textlength(text, font=f) > W - margin:
                 f = font(kind, f.size - 4)
             return f
-        d.rectangle((0, H / 2 - 170, W, H / 2 + 150), fill=(0, 0, 0, 150))
+        band = Image.new("RGBA", (W, H), (0, 0, 0, 0))  # 帯は重ねて塗る(直接塗ると下の動画が透ける)
+        ImageDraw.Draw(band).rectangle((0, H / 2 - 170, W, H / 2 + 150), fill=(0, 0, 0, 150))
+        img.alpha_composite(band); d = ImageDraw.Draw(img, "RGBA")
         if l1:
             ctext(d, (W / 2, H / 2 - 85), l1, fit("xb", 66 * pop, l1, 80), (255, 255, 255), 7)
         base = fit("dela", 120, l2, 80).size

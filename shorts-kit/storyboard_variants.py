@@ -399,7 +399,7 @@ def render(p, v, src, out):
                     f += ",boxblur=24:2"
                 if s.get("dim"):
                     f += f",eq=brightness={-s['dim'] * 0.5:.2f}"
-                fc.append(f + f",setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=2[s{k}]")
+                fc.append(f + f",setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration={dur + 1:.2f}[s{k}]")
                 if s.get("slide") and i > 0 and prev_band and b.get("slide", True):  # 前の映像が右へ抜け、新しい映像が左から入る
                     args += ["-loop", "1", "-t", f"{SLIDE_T + 0.1:.2f}", "-i", prev_band]
                     P = f"(1-pow(1-min(t/{SLIDE_T},1),3))"

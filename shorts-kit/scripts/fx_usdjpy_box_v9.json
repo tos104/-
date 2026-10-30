@@ -11,9 +11,10 @@
  "font_head": "ShipporiMincho-ExtraBold.ttf",
  "font_cap": "ShipporiMincho-ExtraBold.ttf",
  "font_tag": "ShipporiMincho-Medium.ttf",
- "loudness": {"lufs": -14, "peak_dbtp": -1.0},
+ "loudness": {"lufs": -14, "peak_dbtp": -1.5},
  "bgm": {"bpm": 84, "vol": 0.6, "duck": 0.6},
- "say_speed": 1.25,
+ "say_speed": 1.2,
+ "voice": {"engine": "voicevox", "speaker": 13, "name": "青山龍星(ノーマル)", "credit": "VOICEVOX:青山龍星"},
  "shots": [
   {"rec": [33.0], "reveal": {"x": [876, 876], "box": [300, 351, 1211], "until": 0.01}, "dur": 2.6, "rect": [800, 284, 300], "rect_end": [806, 285, 290], "color": "red", "tate": "レンジを\n抜けた瞬間に\n買うと…", "tate_side": "left", "type": false, "markers": [{"type": "dot", "x": 863, "y": 287, "t": -1.0, "color": "red", "text": "もし買ったら"}], "note": "HOOK(冒頭0秒)。ユーザー共有の知見『一発で分かる1枚』に合わせ、0秒からボックスと上に飛び出した足(ヒゲ)を大きく寄せて見せ、『もし買ったら』の点も最初から出す。続きの足は次のカットで出す", "sfx": [["pop", 0.2, 0.5]], "say": [["レンジを抜けた瞬間に買うと…", 0.15]]},
   {"rec": [33.0], "reveal": {"x": [868, 966], "box": [300, 351, 1211], "until": 2.4}, "dur": 3.0, "rect": [895, 292, 300], "rect_end": [912, 305, 280], "mark": [897, 318], "color": "red", "tate": "すぐレンジに\n戻される", "tate_side": "left", "markers": [{"type": "dot", "x": 863, "y": 287, "t": 0.0, "color": "red"}, {"type": "arrow", "x": 878, "y": 246, "x2": 897, "y2": 318, "t": 0.6, "color": "red"}], "note": "失敗の結果。続きの足を 10/19 8:59(x≈966・ユーザーのスクショと同じ形)まで出す: ヒゲで抜け → レンジ内へ戻る → レンジの下まで落ちる。縦書きは出した足を隠さないよう左に 2 列", "sfx": [["impact", 0.45, 0.45]], "say": [["すぐ、レンジに戻される", 0.2]]},

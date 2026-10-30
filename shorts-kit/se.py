@@ -102,7 +102,59 @@ def riser(dur=1.0):
     return _norm((tone * 0.6 + air * 0.5) * (t / dur) ** 2, 0.5)
 
 
-SOUNDS = {"logo": logo, "riser": riser, "whoosh": whoosh, "pop": pop, "impact": impact, "kira": kira, "drumroll": drumroll, "ding": ding}
+def _verb(x, t60=0.6, mix=0.35):
+    """短い残響(減衰するノイズとのたたみ込み)。薄い合成音に空間と厚みを足す。"""
+    n = int(t60 * SR)
+    ir = rng.standard_normal(n) * np.exp(-np.arange(n) / SR * 6.9 / t60)
+    ir = _lowpass(ir, 6000); ir /= np.sqrt((ir ** 2).sum())
+    wet = np.fft.irfft(np.fft.rfft(x, len(x) + n) * np.fft.rfft(ir, len(x) + n))[: len(x) + n]
+    out = np.zeros(len(x) + n); out[: len(x)] += x
+    return out * (1 - mix) + wet * mix * 3
+
+
+def _bell(f, dur, decay):
+    """金属の鐘: 整数倍でない倍音(2.76/5.40/8.93)で『チーン』の金属感を出す。"""
+    t = _t(dur)
+    x = np.zeros_like(t)
+    for r, a, dk in [(1, 1, 1), (2.76, 0.6, 1.6), (5.40, 0.35, 2.4), (8.93, 0.18, 3.5)]:
+        x += a * np.sin(2 * np.pi * f * r * t) * np.exp(-t * decay * dk)
+    return x
+
+
+def register(dur=1.3):
+    """レジの『ガシャ・チーン』: 引き出しの当たり + 高い鐘2つ + 残響。確定の値段に。"""
+    t = _t(dur)
+    clunk = _lowpass(rng.standard_normal(len(t)), 1800) * np.exp(-t * 55)
+    clunk += 0.8 * np.sin(2 * np.pi * np.cumsum(180 * np.exp(-t * 20) + 90) / SR) * np.exp(-t * 30)
+    bell = np.zeros_like(t)
+    d = int(0.035 * SR)
+    bell[d:] += _bell(2093, dur, 3.2)[: len(t) - d]
+    bell[d:] += 0.7 * _bell(2637, dur, 3.6)[: len(t) - d]
+    x = _verb(0.9 * clunk + 0.8 * bell, 0.7, 0.3)
+    return _norm(np.tanh(1.4 * x), 0.95)
+
+
+def impact2(dur=1.1):
+    """結果の『ドン』: 低いうなり + 打撃 + 割れる高音 + 残響。impact より太く長い。"""
+    t = _t(dur)
+    sub = np.sin(2 * np.pi * np.cumsum(90 * np.exp(-t * 6) + 42) / SR) * np.exp(-t * 3.5)
+    hit = _lowpass(rng.standard_normal(len(t)), 3500) * np.exp(-t * 40)
+    crash = (rng.standard_normal(len(t)) - _lowpass(rng.standard_normal(len(t)), 4000)) * np.exp(-t * 7)
+    x = _verb(1.3 * sub + 0.9 * hit + 0.25 * crash, 0.9, 0.3)
+    return _norm(np.tanh(2.0 * x), 0.98)
+
+
+def whoosh2(dur=0.4):
+    """切り替えの『シュッ』: 風(帯域が上がって下がるノイズ) + 低い唸りで厚みを足す。"""
+    t = _t(dur)
+    env = np.sin(np.pi * t / dur) ** 1.5
+    cut = 400 + 7000 * np.sin(np.pi * t / dur) ** 2
+    air = _lowpass(rng.standard_normal(len(t)), cut) - 0.5 * _lowpass(rng.standard_normal(len(t)), 300)
+    body = np.sin(2 * np.pi * np.cumsum(120 + 260 * t / dur) / SR) * 0.35
+    return _norm(_verb((air + body) * env, 0.35, 0.2), 0.8)
+
+
+SOUNDS = {"logo": logo, "riser": riser, "whoosh": whoosh, "pop": pop, "impact": impact, "kira": kira, "drumroll": drumroll, "ding": ding, "register": register, "impact2": impact2, "whoosh2": whoosh2}
 
 
 def get(name):

@@ -312,24 +312,37 @@ def board(p, src, out_dir):
         sheet.save(out); print(out, sheet.size)
 
 
-def intro_frame(path, fi, n):
+SE_GAIN = {"whoosh2": 0.5, "impact2": 0.5, "register": 0.5}  # 新しい効果音は声に負けない大きさ
+
+
+def intro_frame(path, fi, n, copy=None):
     """冒頭のカード全面表示の1コマ。最後の 0.13 秒で元動画の枠の位置へ縮みながら消える。"""
     card = Image.open(path).convert("RGB")
     bg = card.resize((W, int(W * card.height / card.width * 1.0)), Image.LANCZOS)
     bg = bg.resize((W, H), Image.LANCZOS).filter(ImageFilter.GaussianBlur(30))
     bg = Image.blend(bg, Image.new("RGB", (W, H), (10, 10, 10)), 0.6)
-    cw = int(W * 0.9); ch = int(cw * card.height / card.width)
+    cw = int(W * (0.74 if copy else 0.9)); ch = int(cw * card.height / card.width)
     out_n = 4  # 縮んで消えるコマ数
     k = max(0.0, (fi - (n - out_n)) / out_n)
     e = 1 - (1 - k) ** 2
     sc = 1 - 0.55 * e
-    cy = H / 2 + (VID_Y2 + W * 9 // 32 - H / 2) * e
+    cy0 = H / 2 + (140 if copy else 0)  # 上に文字があるときはカードを少し下げる
+    cy = cy0 + (VID_Y2 + W * 9 // 32 - cy0) * e
     c = card.resize((int(cw * sc), int(ch * sc)), Image.LANCZOS)
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     img.paste(Image.blend(bg, bg, 0).convert("RGBA"), (0, 0))
     img.paste(c, (int(W / 2 - c.width / 2), int(cy - c.height / 2)))
+    if copy:  # 何の画面かを一言で(カードだけだと意味が分からない)
+        d = ImageDraw.Draw(img)
+        l1, l2 = copy
+        if l1:
+            ctext(d, (W / 2, 150), l1, font("xb", 66), (255, 255, 255), 7)
+        f = font("dela", 120)
+        while d.textlength(l2, font=f) > W - 60:
+            f = font("dela", f.size - 4)
+        ctext(d, (W / 2, 290), l2, f, (255, 220, 60), 10)
     a = int(255 * (1 - k))
-    img.putalpha(a)
+    img.putalpha(img.getchannel("A").point(lambda v: v * a // 255))
     return img
 
 
@@ -404,14 +417,15 @@ def render(p, v, src, out):
         if intro:
             n_in = round(intro.get("dur", 0.5) * 30)
             for fi in range(n_in):
-                intro_frame(intro["image"], fi, n_in).save(os.path.join(td, f"in_{fi:04d}.png"))
+                intro_frame(intro["image"], fi, n_in, intro.get("copy")).save(os.path.join(td, f"in_{fi:04d}.png"))
             if intro.get("whoosh", True):
                 audio.append((max(0.0, n_in / 30 - 0.2), np.zeros(1, np.float32), [(0, "whoosh")]))
         mix = np.zeros(int((total + 0.5) * SR), np.float32)
         for at, x, sfx in audio:
             i0 = int(at * SR); mix[i0:i0 + len(x)] += x[: len(mix) - i0]
             for dt, name in sfx:
-                s_ = se.get(name) * 0.3
+                name = p.get("se_map", {}).get(name, name)  # 案ごとに効果音を差し替え(過去の動画は元の音のまま)
+                s_ = se.get(name) * SE_GAIN.get(name, 0.3)
                 j0 = max(0, int((at + dt) * SR)); mix[j0:j0 + len(s_)] += s_[: len(mix) - j0]
         mix = mix[: int(total * SR)]
         mix /= max(1.0, np.abs(mix).max() / 0.95)

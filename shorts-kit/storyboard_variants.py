@@ -198,6 +198,14 @@ UI_SAFE = 1536  # これより下は YouTube のタイトル・ボタンが重�
 
 def layer_D2(b, t=None):
     tx = b["texts"]
+    pa = tx.get("pop_at")  # 答えが出る時刻(区切りの頭からの秒)。それまでは before の中身(「？」)を出し、ネタバレしない
+    big = 1.0
+    if pa is not None and t is not None:
+        if t < pa:
+            tx = {**tx, **tx.get("before", {})}
+        else:
+            k = min(1.0, (t - pa) / 0.35)
+            big = 1 + 0.8 * (1 - k) ** 3 + 0.2 * math.sin(math.pi * k) * (1 - k)  # 大きく出て弾んで戻る
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
     l1, l2 = tx.get("copy", ["", ""])
     if l1:
@@ -205,7 +213,7 @@ def layer_D2(b, t=None):
     f = font("dela", 96)
     while d.textlength(l2, font=f) > W - 80:
         f = font("dela", f.size - 4)
-    ctext(d, (W / 2, 240 if l1 else 195), l2, f, (255, 220, 60), 8)  # 1行だけのときは上の枠の中央に
+    ctext(d, (W / 2, 240 if l1 else 195), l2, font("dela", int(f.size * big)), (255, 220, 60), 8)  # 1行だけのときは上の枠の中央に
     vh = W * 9 // 16
     d.rectangle((0, VID_Y2 - 6, W, VID_Y2), fill=(255, 255, 255)); d.rectangle((0, VID_Y2 + vh, W, VID_Y2 + vh + 6), fill=(255, 255, 255))
     s = REC_S
@@ -273,9 +281,9 @@ def layer_D2(b, t=None):
 LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2}
 
 
-def still(src, key, b):
-    """絵コンテ用: 枠に元動画の1コマを貼り、上に絵を重ねる。"""
-    over, slots = LAYER[key](b)
+def still(src, key, b, t=None):
+    """絵コンテ用: 枠に元動画の1コマを貼り、上に絵を重ねる。t: 区切りの頭からの秒(答えが出る前後を描き分ける)"""
+    over, slots = LAYER[key](b, t) if key == "D2" else LAYER[key](b)
     img = Image.new("RGB", (W, H), (0, 0, 0))
     for s in slots:
         im = frame(src, s["t"])
@@ -291,18 +299,26 @@ def still(src, key, b):
 
 def board(p, src, out_dir):
     for v in p["variants"]:
-        frames = [still(src, v["key"], b).resize((W // 3, H // 3), Image.LANCZOS) for b in v["beats"]]
+        panels = []  # 答えが出る区切りは「出る前」「出た後」の2コマに分ける
+        for b in v["beats"]:
+            pa = b["texts"].get("pop_at")
+            if pa is not None:
+                panels.append((b, 0.0, "(答えの前) ")); panels.append((b, pa + 1.0, f"({pa:.1f}秒で答え) "))
+            else:
+                panels.append((b, None, ""))
+        frames = [still(src, v["key"], b, t).resize((W // 3, H // 3), Image.LANCZOS) for b, t, _ in panels]
         tw, th = frames[0].size
         sheet = Image.new("RGB", (16 + len(frames) * (tw + 16), th + 330), "white")
         d = ImageDraw.Draw(sheet)
         d.text((20, 18), f"案{v['key']}  {v['name']}", font=font("dela", 44), fill=(30, 30, 30))
         d.text((20, 80), "構成: " + v["structure"], font=font("bold", 26), fill=(60, 60, 60))
         d.text((20, 118), "デザイン: " + v["design"], font=font("bold", 26), fill=(60, 60, 60))
-        for k, (fr, b) in enumerate(zip(frames, v["beats"])):
+        for k, (fr, (b, _, tag)) in enumerate(zip(frames, panels)):
             x = 16 + k * (tw + 16)
             sheet.paste(fr, (x, 170))
             line, yy = "", 170 + th + 10
-            for ch in f"{k + 1}. 声: " + b.get("say", ""):
+            n = v["beats"].index(b) + 1
+            for ch in f"{n}. {tag}声: " + b.get("say", ""):
                 if d.textlength(line + ch, font=font("bold", 21)) > tw:
                     d.text((x, yy), line, font=font("bold", 21), fill=(70, 70, 70)); yy += 27; line = ch
                 else:
@@ -378,7 +394,10 @@ def render(p, v, src, out):
             audio.append((t, voice, sfx))
             if b["texts"].get("total_pop") is not None:
                 sfx.append((b["texts"]["total_pop"], "ding"))  # 確定の値段に合わせてチーン
-            anim = (bool(b["texts"].get("buy_pop")) or b["texts"].get("total_pop") is not None) and v["key"] == "D2"
+            if b["texts"].get("pop_at") is not None:
+                sfx.append((b["texts"]["pop_at"], b["texts"].get("pop_se", "register")))  # 答えが出る瞬間の音
+            anim = (bool(b["texts"].get("buy_pop")) or b["texts"].get("total_pop") is not None
+                    or b["texts"].get("pop_at") is not None) and v["key"] == "D2"
             if anim:  # 時刻ごとに描いた連番(ボタンが跳ねる)
                 for fi in range(n):
                     LAYER[v["key"]](b, fi / 30)[0].save(os.path.join(td, f"o{i:02d}_{fi:04d}.png"))

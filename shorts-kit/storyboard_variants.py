@@ -230,8 +230,20 @@ def layer_D2(b, t=None):
     if tx.get("total"):
         y = py1 - 95 * s
         d.line((px0 + 30, y - 55 * s, px1 - 30, y - 55 * s), fill=(40, 40, 40), width=4)
+        val, sc, mark = tx["total"][1], 1.0, None
+        tp = tx.get("total_pop")  # 確定の値段が出る時刻(区切りの頭からの秒)。マーカーが引かれ、数字が大きく出て戻る
+        if tp is not None:
+            u = 1.0 if t is None else (t - tp) / 0.4
+            if u < 0:
+                val = tx.get("total_before", "？円")
+            else:
+                mark = min(1.0, u * 1.6)
+                k = min(1.0, u)
+                sc = 1 + 0.9 * (1 - k) ** 3 + 0.25 * math.sin(math.pi * k) * (1 - k)  # 大きく出て少し弾んで戻る
+        if mark:
+            d.rectangle((px0 + 20, y - 46 * s, px0 + 20 + (px1 - px0 - 40) * mark, y + 46 * s), fill=(255, 226, 80))
         d.text((px0 + 40, y), tx["total"][0], font=font("dela", int(54 * s)), fill=(40, 40, 40), anchor="lm")
-        d.text((px1 - 40, y), tx["total"][1], font=font("dela", int(68 * s)), fill=(200, 40, 50), anchor="rm")
+        d.text((px1 - 40, y), val, font=font("dela", int(68 * s * sc)), fill=(200, 40, 50), anchor="rm")
     if tx.get("buy") is not None:  # 「買う？見送る？」の選択(-1=どちらも未選択)
         by = py1 + 60
         pops = tx.get("buy_pop", [])  # 各ボタンが一度だけ跳ねる時刻(区切りの頭からの秒)
@@ -300,6 +312,27 @@ def board(p, src, out_dir):
         sheet.save(out); print(out, sheet.size)
 
 
+def intro_frame(path, fi, n):
+    """冒頭のカード全面表示の1コマ。最後の 0.13 秒で元動画の枠の位置へ縮みながら消える。"""
+    card = Image.open(path).convert("RGB")
+    bg = card.resize((W, int(W * card.height / card.width * 1.0)), Image.LANCZOS)
+    bg = bg.resize((W, H), Image.LANCZOS).filter(ImageFilter.GaussianBlur(30))
+    bg = Image.blend(bg, Image.new("RGB", (W, H), (10, 10, 10)), 0.6)
+    cw = int(W * 0.9); ch = int(cw * card.height / card.width)
+    out_n = 4  # 縮んで消えるコマ数
+    k = max(0.0, (fi - (n - out_n)) / out_n)
+    e = 1 - (1 - k) ** 2
+    sc = 1 - 0.55 * e
+    cy = H / 2 + (VID_Y2 + W * 9 // 32 - H / 2) * e
+    c = card.resize((int(cw * sc), int(ch * sc)), Image.LANCZOS)
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    img.paste(Image.blend(bg, bg, 0).convert("RGBA"), (0, 0))
+    img.paste(c, (int(W / 2 - c.width / 2), int(cy - c.height / 2)))
+    a = int(255 * (1 - k))
+    img.putalpha(a)
+    return img
+
+
 def render(p, v, src, out):
     """1案を動画にする。各区切り: 声(元動画・間詰め)の長さだけ、枠に元動画を流して絵を重ねる。"""
     src_w, src_h = rs.probe(src)
@@ -321,7 +354,9 @@ def render(p, v, src, out):
             if i > 0 and b.get("slide", True):  # slide: false の区切りは切り替えの動きと音なし
                 sfx.insert(0, (-0.05, "whoosh"))  # シュッは切り替えの動きと同時
             audio.append((t, voice, sfx))
-            anim = bool(b["texts"].get("buy_pop")) and v["key"] == "D2"
+            if b["texts"].get("total_pop") is not None:
+                sfx.append((b["texts"]["total_pop"], "ding"))  # 確定の値段に合わせてチーン
+            anim = (bool(b["texts"].get("buy_pop")) or b["texts"].get("total_pop") is not None) and v["key"] == "D2"
             if anim:  # 時刻ごとに描いた連番(ボタンが跳ねる)
                 for fi in range(n):
                     LAYER[v["key"]](b, fi / 30)[0].save(os.path.join(td, f"o{i:02d}_{fi:04d}.png"))
@@ -334,7 +369,8 @@ def render(p, v, src, out):
             args, fc, last = [], [f"color=c=black:s={W}x{H}:r=30:d={dur + 1:.3f}[base]"], "base"
             nin = len(slots)
             for k, s in enumerate(slots):
-                args += ["-ss", f"{s['t']:.3f}", "-t", f"{dur + 0.5:.3f}", "-i", src]
+                vlen = min(dur + 0.5, b.get("v_max", 1e9))  # v_max: 元動画の字幕が出る前で映像だけ止める(声は続ける)
+                args += ["-ss", f"{s['t']:.3f}", "-t", f"{vlen:.3f}", "-i", src]
                 x, y, cw, ch = crop_box(src_w, src_h, s["w"], s["h"], s["cx"], s["cy"], s["zoom"])
                 f = f"[{k}:v]crop={cw}:{ch}:{x}:{y},scale={s['w']}:{s['h']}:flags=lanczos,setsar=1,fps=30"
                 if s.get("blur"):
@@ -364,6 +400,13 @@ def render(p, v, src, out):
                                 "-vf", f"crop={band[0]['w']}:{band[0]['h']}:0:{band[0]['y']}", prev_band], check=True)
             t += dur
         total = t
+        intro = p.get("intro")  # 冒頭だけカードの画像を画面いっぱいに出し、元の画面へ縮んで消える
+        if intro:
+            n_in = round(intro.get("dur", 0.5) * 30)
+            for fi in range(n_in):
+                intro_frame(intro["image"], fi, n_in).save(os.path.join(td, f"in_{fi:04d}.png"))
+            if intro.get("whoosh", True):
+                audio.append((max(0.0, n_in / 30 - 0.2), np.zeros(1, np.float32), [(0, "whoosh")]))
         mix = np.zeros(int((total + 0.5) * SR), np.float32)
         for at, x, sfx in audio:
             i0 = int(at * SR); mix[i0:i0 + len(x)] += x[: len(mix) - i0]
@@ -375,8 +418,12 @@ def render(p, v, src, out):
         wav = os.path.join(td, "mix.wav"); se.write_wav(wav, mix)
         lst = os.path.join(td, "list.txt")
         open(lst, "w").write("".join(f"file '{q}'\n" for q in parts))
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-i", wav,
-                        "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-crf", "19", "-pix_fmt", "yuv420p",
+        vin, vmap = [], ["-map", "0:v"]
+        if intro:
+            vin = ["-framerate", "30", "-i", os.path.join(td, "in_%04d.png")]
+            vmap = ["-filter_complex", "[0:v][2:v]overlay=0:0:eof_action=pass,format=yuv420p[v]", "-map", "[v]"]
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-i", wav, *vin,
+                        *vmap, "-map", "1:a", "-c:v", "libx264", "-crf", "19", "-pix_fmt", "yuv420p",
                         "-af", "loudnorm=I=-14:TP=-1.0:LRA=11", "-c:a", "aac", "-b:a", "192k", "-shortest",
                         "-movflags", "+faststart", out], check=True)
     print(f"{out} ({total:.1f}s)")

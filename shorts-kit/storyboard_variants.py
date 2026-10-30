@@ -312,7 +312,7 @@ def board(p, src, out_dir):
         sheet.save(out); print(out, sheet.size)
 
 
-SE_GAIN = {"whoosh2": 0.22, "impact2": 0.5, "register": 0.5}  # 新しい効果音は声に負けない大きさ
+SE_GAIN = {"whoosh2": 0.22, "impact2": 0.5, "register": 0.2}  # 新しい効果音は声に負けない大きさ
 
 
 def intro_frame(path, fi, n, copy=None):

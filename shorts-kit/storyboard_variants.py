@@ -426,6 +426,17 @@ def render(p, v, src, out):
             n_in = round(intro.get("dur", 0.5) * 30)
             for fi in range(n_in):
                 intro_frame(intro["image"], fi, n_in, intro.get("copy")).save(os.path.join(td, f"in_{fi:04d}.png"))
+            if intro.get("before_voice"):  # 声と重ねない: 冒頭を頭に足し、声と効果音を後ろへずらす
+                first = os.path.join(td, "first.png")
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", parts[0], "-frames:v", "1", first], check=True)
+                clip = os.path.join(td, "intro.mp4")
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-framerate", "30", "-i", first,
+                                "-framerate", "30", "-i", os.path.join(td, "in_%04d.png"), "-filter_complex",
+                                "[0:v][1:v]overlay=0:0:eof_action=pass,format=yuv420p", "-frames:v", str(n_in),
+                                "-c:v", "libx264", "-crf", "17", clip], check=True)
+                parts.insert(0, clip)
+                audio = [(at + n_in / 30, x, sfx) for at, x, sfx in audio]
+                total += n_in / 30
             if intro.get("whoosh", True):
                 audio.append((max(0.0, n_in / 30 - 0.2), np.zeros(1, np.float32), [(0, "whoosh")]))
         mix = np.zeros(int((total + 0.5) * SR), np.float32)
@@ -441,7 +452,7 @@ def render(p, v, src, out):
         lst = os.path.join(td, "list.txt")
         open(lst, "w").write("".join(f"file '{q}'\n" for q in parts))
         vin, vmap = [], ["-map", "0:v"]
-        if intro:
+        if intro and not intro.get("before_voice"):
             vin = ["-framerate", "30", "-i", os.path.join(td, "in_%04d.png")]
             vmap = ["-filter_complex", "[0:v][2:v]overlay=0:0:eof_action=pass,format=yuv420p[v]", "-map", "[v]"]
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lst, "-i", wav, *vin,

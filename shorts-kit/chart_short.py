@@ -888,7 +888,13 @@ def render(sc, charts, out):
         af = []
         if "lufs" in sc.get("loudness", {}):   # 統合ラウドネスを目標に合わせる(YouTube の目安 -14 LUFS・true peak -1 dBTP)
             L = sc["loudness"]
-            af = ["-af", f"loudnorm=I={L['lufs']}:TP={L.get('peak_dbtp', -1.0)}:LRA=11"]
+            base = f"loudnorm=I={L['lufs']}:TP={L.get('peak_dbtp', -1.0)}:LRA=11"
+            # 1 回目で測り、2 回目でその値を渡して合わせる(1 回だけだと目標より 1〜2 dB 小さく出たため)
+            log = subprocess.run(["ffmpeg", "-hide_banner", "-i", wav, "-af", base + ":print_format=json", "-f", "null", "-"],
+                                 capture_output=True, text=True).stderr
+            m = json.loads(log[log.rindex("{"):log.rindex("}") + 1])
+            af = ["-af", base + f":measured_I={m['input_i']}:measured_TP={m['input_tp']}:measured_LRA={m['input_lra']}"
+                  f":measured_thresh={m['input_thresh']}:offset={m['target_offset']}:linear=true"]
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", video, "-i", wav, "-c:v", "copy"] + af +
                        ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest", "-movflags", "+faststart", out],
                        check=True)

@@ -133,6 +133,9 @@ class Charts:
             cmd = ["ffmpeg", "-v", "error", "-ss", f"{lo:.3f}", "-i", path, "-t", f"{span + 1 / rate:.3f}",
                    "-vf", f"fps={rate:.4f}", "-frames:v", str(n), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]
             raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+            if not raw and n == 1:     # 静止画 1 コマで、ごく短い区間にコマがない録画(可変フレームレート)は少し広く取る
+                cmd[cmd.index("-t") + 1] = "0.2"
+                raw = subprocess.run(cmd, capture_output=True, check=True).stdout
             arr = np.frombuffer(raw, np.uint8).reshape(-1, 588, 1280, 3).copy()
             heads = [Image.fromarray(a[REC_HEAD[1]:REC_HEAD[3], REC_HEAD[0]:REC_HEAD[2]]) for a in arr]
             for x0, y0, x1, y1 in REC_WHITE:

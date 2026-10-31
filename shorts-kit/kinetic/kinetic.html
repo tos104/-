@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<!-- キネティック・タイポの描画ページ。時刻 t を渡すと、その瞬間の絵を毎回同じに描く(CSSアニメ・乱数なし)。
+     render_kinetic.py が window.SCRIPT を入れ、seek(t) → スクショを繰り返して動画にする。 -->
+<style>
+@font-face{font-family:Dela;src:url(../fonts/DelaGothicOne-Regular.ttf)}
+@font-face{font-family:Mplus;src:url(../fonts/MPLUSRounded1c-Black.ttf)}
+html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#000}
+#stage{position:absolute;inset:0;overflow:hidden}
+#cam{position:absolute;inset:0;transform-origin:50% 50%}
+#burst{position:absolute;left:50%;top:50%;width:2600px;height:2600px;margin:-1300px 0 0 -1300px}
+#prev,#word{position:absolute;left:0;right:0;text-align:center;white-space:nowrap;font-family:Dela;line-height:1}
+#word{top:50%;perspective:1400px}
+#word span{display:inline-block}
+#prev{top:30%;opacity:.35}
+#hud{position:absolute;left:48px;right:48px;top:56px;font:600 26px monospace;letter-spacing:.12em;display:flex;justify-content:space-between}
+#sub{position:absolute;left:0;right:0;bottom:260px;text-align:center;font:900 54px Mplus}
+#ghost{position:absolute;right:-80px;bottom:120px;font:400 900px Dela;opacity:.10;line-height:1}
+</style></head><body>
+<div id="stage"><div id="cam">
+  <svg id="burst" viewBox="-100 -100 200 200"><polygon id="burstPoly"/></svg>
+  <div id="ghost"></div>
+  <div id="prev"></div>
+  <div id="word"><span id="w"></span></div>
+</div>
+<div id="hud"><span id="hudL"></span><span id="hudR"></span></div>
+<div id="sub"></div></div>
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const outBack = x => {const c=1.7; x=clamp(x); return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2);};
+const outExpo = x => x>=1?1:1-Math.pow(2,-10*clamp(x));
+// 星形(トゲの数・凹み)を決まった形で作る
+function burstPoints(n,inner){let p=[];for(let i=0;i<n*2;i++){const r=i%2?inner:100,a=Math.PI*i/n;p.push((r*Math.cos(a)).toFixed(2)+','+(r*Math.sin(a)).toFixed(2));}return p.join(' ');}
+$('burstPoly').setAttribute('points',burstPoints(18,38));
+const fitCache={};
+function fit(text,maxW,base){ // 横幅に収まる最大の文字サイズ(結果をキャッシュ=毎回同じ)
+  const k=text+'|'+maxW+'|'+base; if(fitCache[k])return fitCache[k];
+  const w=$('w'); w.style.transform='none'; let s=base;
+  w.textContent=text; while(s>60){w.style.fontSize=s+'px'; if(w.getBoundingClientRect().width<=maxW)break; s-=8;}
+  return fitCache[k]=s;
+}
+window.seek = function(t){
+  const S=window.SCRIPT, beat=60/S.bpm;
+  let i=-1, acc=0, start=0;
+  for(let j=0;j<S.beats.length;j++){const len=(S.beats[j].len||1)*beat; if(t>=acc){i=j;start=acc;} acc+=len;}
+  const b=S.beats[Math.max(i,0)], local=(t-start), bl=(b.len||1)*beat, p=local/bl;
+  const pal=S.palette[b.pal||0];
+  document.body.style.background=pal.bg; $('stage').style.background=pal.bg;
+  // 表示する語
+  const style=b.style||'slam', w=$('w');
+  const size=fit(b.text,980,b.size||420);
+  w.textContent=b.text; w.style.fontSize=size+'px'; w.style.color=pal.fg;
+  $('word').style.marginTop=(-size/2)+'px';
+  let tr='';
+  if(style==='slam'){const k=outBack(local/0.14); tr=`scale(${2.4-1.4*k})`; w.style.opacity=clamp(local/0.05);}
+  else if(style==='pop'){const k=outBack(local/0.18); tr=`scale(${k})`; w.style.opacity=1;}
+  else if(style==='tilt3d'){const k=outExpo(local/0.35); tr=`rotateX(${(1-k)*75}deg) rotateY(${-18+8*p}deg) translateZ(${(1-k)*-600}px)`; w.style.opacity=clamp(local/0.08);}
+  else if(style==='slide'){const k=outExpo(local/0.22); tr=`translateX(${(1-k)*1100}px) skewX(${(1-k)*-20}deg)`; w.style.opacity=1;}
+  else if(style==='type'){const n=Math.ceil([...b.text].length*clamp(local/(bl*0.6))); w.textContent=[...b.text].slice(0,n).join(''); tr=''; w.style.opacity=1;}
+  // 拍頭の揺れ(決まった減衰振動)
+  const shake=(b.shake??(style==='slam'?18:0))*Math.exp(-local*14)*Math.sin(local*90);
+  w.style.transform=tr+` translate(${shake}px,${shake*0.6}px)`;
+  // 直前の語を小さく残す(stack)
+  const pv=$('prev');
+  if(b.stack&&i>0){pv.textContent=S.beats[i-1].text; pv.style.fontSize=Math.round(fit(S.beats[i-1].text,980,420)*0.42)+'px'; pv.style.color=pal.fg;} else pv.textContent='';
+  // 星形
+  const bu=$('burst'); if(b.burst){bu.style.display='block'; bu.style.fill=pal.accent; const k=outBack(local/0.2); bu.style.transform=`scale(${0.2+0.8*k}) rotate(${t*12}deg)`;} else bu.style.display='none';
+  // 背景の大きな文字
+  $('ghost').textContent=b.ghost||''; $('ghost').style.color=pal.fg;
+  // カメラ: 拍の間ゆっくり寄る+指定でズーム/回転
+  const cam=b.cam||'push'; let ct='';
+  if(cam==='push') ct=`scale(${1+0.06*p})`;
+  else if(cam==='pull') ct=`scale(${1.12-0.12*outExpo(p)})`;
+  else if(cam==='roll') ct=`rotate(${-6+6*outExpo(p)}deg) scale(1.05)`;
+  else if(cam==='whip') ct=`translateY(${(1-outExpo(local/0.2))*-500}px)`;
+  $('cam').style.transform=ct;
+  // HUD と字幕
+  $('hud').style.color=pal.fg; $('hud').style.opacity=S.hud?0.7:0;
+  $('hudL').textContent=S.hud?`FRAME ${String(Math.round(t*S.fps)).padStart(4,'0')}  拍 ${String(i+1).padStart(2,'0')}`:'';
+  $('hudR').textContent=S.hud||'';
+  $('sub').textContent=b.sub||''; $('sub').style.color=pal.fg;
+};
+window.totalSec = () => {const S=window.SCRIPT; return S.beats.reduce((a,b)=>a+(b.len||1),0)*60/S.bpm + (S.tail||0.6);};
+</script></body></html>

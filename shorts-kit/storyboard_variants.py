@@ -331,6 +331,38 @@ def board(p, src, out_dir):
 SE_GAIN = {"whoosh2": 0.22, "impact2": 0.5, "register": 0.2}  # 新しい効果音は声に負けない大きさ
 
 
+def kinetic_frame(path, fi, n, words, push=0.10):
+    """動く冒頭の1コマ: カードの絵はゆっくり寄り、言葉が時刻どおりに1つずつ弾んで積み上がる。止まる瞬間を作らない。
+    words: [{"t": 出る秒, "text": 文字, "size": 大きさ, "color": [r,g,b]}]。最後は切らずに終わる(切り替えは手動)。"""
+    t = fi / 30
+    card = Image.open(path).convert("RGB")
+    bg = card.resize((W, H), Image.LANCZOS).filter(ImageFilter.GaussianBlur(30))
+    bg = Image.blend(bg, Image.new("RGB", (W, H), (10, 10, 10)), 0.6)
+    sc = 1 + push * fi / max(1, n - 1)
+    cw = int(W * 0.92 * sc); ch = int(cw * card.height / card.width)
+    img = bg.convert("RGBA")
+    img.paste(card.resize((cw, ch), Image.LANCZOS), (int(W / 2 - cw / 2), int(H / 2 - ch / 2)))
+    shown = [w for w in words if t >= w["t"]]
+    if shown:
+        hs_all = [int(w.get("size", 90)) + 40 for w in words]  # 位置は最後の並びで固定(言葉が増えても上下に動かない)
+        top = H / 2 - sum(hs_all) / 2
+        hs = hs_all[: len(shown)]
+        band = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        ImageDraw.Draw(band).rectangle((0, top - 30, W, top + sum(hs) + 30), fill=(0, 0, 0, 165))
+        img.alpha_composite(band)
+        d = ImageDraw.Draw(img)
+        y = top
+        for w, h in zip(shown, hs):
+            k = min(1.0, (t - w["t"]) / 0.18)
+            pop = 1 + 0.45 * (1 - k) ** 2  # 出た瞬間だけ大きく、すぐ戻る
+            f = font("dela", int(w.get("size", 90) * pop))
+            while d.textlength(w["text"], font=f) > W - 50:
+                f = font("dela", f.size - 4)
+            ctext(d, (W / 2, y + h / 2), w["text"], f, tuple(w.get("color", (255, 255, 255))), 9)
+            y += h
+    return img
+
+
 def intro_frame(path, fi, n, copy=None):
     """冒頭のカード全面表示の1コマ。カードはゆっくり寄り(動き)、文字は画面の中央に弾んで出る。
     最後の 0.13 秒で元動画の枠の位置へ縮みながら消える。"""
@@ -445,7 +477,12 @@ def render(p, v, src, out):
         if intro:
             n_in = round(intro.get("dur", 0.5) * 30)
             for fi in range(n_in):
-                intro_frame(intro["image"], fi, n_in, intro.get("copy")).save(os.path.join(td, f"in_{fi:04d}.png"))
+                fr = (kinetic_frame(intro["image"], fi, n_in, intro["words"]) if intro.get("words")
+                      else intro_frame(intro["image"], fi, n_in, intro.get("copy")))
+                fr.save(os.path.join(td, f"in_{fi:04d}.png"))
+            for w in intro.get("words", []):  # 言葉が出るたびに短い打撃音
+                if w.get("se"):
+                    audio.append((w["t"], np.zeros(1, np.float32), [(0, w["se"])]))
             if intro.get("before_voice"):  # 声と重ねない: 冒頭を頭に足し、声と効果音を後ろへずらす
                 first = os.path.join(td, "first.png")
                 subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", parts[0], "-frames:v", "1", first], check=True)

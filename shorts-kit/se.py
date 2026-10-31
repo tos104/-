@@ -154,7 +154,15 @@ def whoosh2(dur=0.4):
     return _norm(_verb((air + body) * env, 0.35, 0.2), 0.8)
 
 
-SOUNDS = {"logo": logo, "riser": riser, "whoosh": whoosh, "pop": pop, "impact": impact, "kira": kira, "drumroll": drumroll, "ding": ding, "register": register, "impact2": impact2, "whoosh2": whoosh2}
+def tap(dur=0.22):
+    """言葉が出るときの『ドッ』: 短い低音の打撃 + 小さなアタック。ピョン・ピンのような高い音は使わない。"""
+    t = _t(dur)
+    body = np.sin(2 * np.pi * np.cumsum(160 * np.exp(-t * 30) + 70) / SR) * np.exp(-t * 22)
+    click = _lowpass(rng.standard_normal(len(t)), 3000) * np.exp(-t * 120)
+    return _norm(np.tanh(1.8 * (body + 0.5 * click)), 0.9)
+
+
+SOUNDS = {"logo": logo, "riser": riser, "whoosh": whoosh, "pop": pop, "impact": impact, "kira": kira, "drumroll": drumroll, "ding": ding, "register": register, "impact2": impact2, "whoosh2": whoosh2, "tap": tap}
 
 
 def get(name):

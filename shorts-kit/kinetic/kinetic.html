@@ -42,6 +42,7 @@ function fit(text,maxW,base){ // 横幅に収まる最大の文字サイズ(結�
 }
 window.seek = function(t){
   const S=window.SCRIPT, beat=60/S.bpm;
+  t=Math.max(0,t-(S.offset||0)); // 曲の1拍目まで最初の語で待つ
   let i=-1, acc=0, start=0;
   for(let j=0;j<S.beats.length;j++){const len=(S.beats[j].len||1)*beat; if(t>=acc){i=j;start=acc;} acc+=len;}
   const b=S.beats[Math.max(i,0)], local=(t-start), bl=(b.len||1)*beat, p=local/bl;
@@ -77,9 +78,9 @@ window.seek = function(t){
   $('cam').style.transform=ct;
   // HUD と字幕
   $('hud').style.color=pal.fg; $('hud').style.opacity=S.hud?0.7:0;
-  $('hudL').textContent=S.hud?`FRAME ${String(Math.round(t*S.fps)).padStart(4,'0')}  拍 ${String(i+1).padStart(2,'0')}`:'';
+  $('hudL').textContent=S.hud?`FRAME ${String(Math.round((t+(S.offset||0))*S.fps)).padStart(4,'0')}  拍 ${String(i+1).padStart(2,'0')}`:'';
   $('hudR').textContent=S.hud||'';
   $('sub').textContent=b.sub||''; $('sub').style.color=pal.fg;
 };
-window.totalSec = () => {const S=window.SCRIPT; return S.beats.reduce((a,b)=>a+(b.len||1),0)*60/S.bpm + (S.tail||0.6);};
+window.totalSec = () => {const S=window.SCRIPT; return (S.offset||0) + S.beats.reduce((a,b)=>a+(b.len||1),0)*60/S.bpm + (S.tail||0.6);};
 </script></body></html>

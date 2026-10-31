@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """キネティック・タイポ(言葉を拍に置く映像)を、Webページ1枚から書き出す。
 
-  python3 kinetic/render_kinetic.py kinetic/sample.json --out out.mp4 [--sheet sheet.png] [--bgm bgm.wav]
+  python3 kinetic/render_kinetic.py kinetic/sample.json --out out.mp4 [--sheet sheet.png] [--bgm bgm.wav] [--music song.mp3]
+
+--music: 曲の拍(BPM・1拍目)を検出し、言葉をその拍に合わせる。台本の bpm は上書きされる。
+        曲は人が用意したもの(Suno で作って書き出した mp3 など)。検出結果は出力に表示する
 
 台本(JSON):
   {"bpm": 120, "fps": 30, "hud": "右上の小さな文字(省略可)",
@@ -22,7 +25,7 @@ SR = se.SR
 
 
 def beat_times(s):
-    beat, t, out = 60 / s["bpm"], 0.0, []
+    beat, t, out = 60 / s["bpm"], s.get("offset", 0.0), []
     for b in s["beats"]:
         out.append(t)
         t += b.get("len", 1) * beat
@@ -39,15 +42,13 @@ def build_audio(s, total, path, bgm=None):
         i = int(t * SR)
         mix[i:i + len(x)] += x[:len(mix) - i]
     if bgm:
-        import wave
-        with wave.open(bgm) as w:
-            d = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(float) / 32768
-            if w.getnchannels() == 2:
-                d = d.reshape(-1, 2).mean(1)
+        raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", bgm, "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"],
+                             capture_output=True, check=True).stdout
+        d = np.frombuffer(raw, np.float32).astype(float)
         n = min(len(d), len(mix))
         mix[:n] += d[:n] * 0.5
     mix = mix[:int(total * SR)]
-    mix /= max(1.0, np.max(np.abs(mix)) / 0.95)
+    mix /= max(1.0, np.max(np.abs(mix)) / 0.95)  # 割れないよう全体を下げる
     se.write_wav(path, mix)
 
 
@@ -57,6 +58,7 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--sheet")
     ap.add_argument("--bgm")
+    ap.add_argument("--music", help="拍を合わせる曲(--bgm を兼ねる)")
     a = ap.parse_args()
     s = json.load(open(a.script))
     s.setdefault("fps", 30)
@@ -64,7 +66,14 @@ def main():
     if missing:
         sys.exit(f"why(なぜこの拍があるか)が無い拍: {missing}。言えない拍は削る")
 
-    total = sum(b.get("len", 1) for b in s["beats"]) * 60 / s["bpm"] + s.get("tail", 0.6)  # kinetic.html の totalSec と同じ式
+    if a.music:
+        sys.path.insert(0, HERE)
+        from beat_detect import detect
+        d = detect(a.music)
+        s["bpm"], s["offset"] = d["bpm"], d["offset"]
+        a.bgm = a.music
+        print(f"拍の検出: {d['bpm']} BPM / 1拍目 {d['offset']}秒")
+    total = s.get("offset", 0.0) + sum(b.get("len", 1) for b in s["beats"]) * 60 / s["bpm"] + s.get("tail", 0.6)  # kinetic.html の totalSec と同じ式
     n = int(round(total * s["fps"]))
     wav = a.out + ".se.wav"
     build_audio(s, total, wav, a.bgm)

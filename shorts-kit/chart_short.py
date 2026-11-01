@@ -108,7 +108,7 @@ class Charts:
         return np.stack(out) if arr.ndim == 4 else out[0]
 
     def finish(self, img):
-        return img.filter(ImageFilter.UnsharpMask(1.6, 70, 2)) if self.look == "vivid" else img
+        return img.filter(ImageFilter.UnsharpMask(1.2, 110, 1)) if self.look == "vivid" else img
 
     def get(self, name, anchor=None):
         if name not in self.cache:
@@ -184,10 +184,16 @@ def centered(d, y, text, f, fill):
 
 
 def rec_crop(img, rect):
+    """録画の一部を切り抜いて帯の大きさに拡大する。拡大は LANCZOS(BICUBIC よりにじみが少ない)。"""
     cx, cy, pw = rect
     ph = pw * PANEL_H / W
-    return img.transform((W, PANEL_H), Image.EXTENT, (cx - pw / 2, cy - ph / 2, cx + pw / 2, cy + ph / 2),
-                         Image.BICUBIC, fillcolor=BG)
+    x0, y0 = int(np.floor(cx - pw / 2)), int(np.floor(cy - ph / 2))
+    x1, y1 = int(np.ceil(cx + pw / 2)) + 1, int(np.ceil(cy + ph / 2)) + 1
+    canvas = Image.new("RGB", (x1 - x0, y1 - y0), BG)     # はみ出した所は背景色
+    canvas.paste(img, (-x0, -y0))
+    big = canvas.resize((round((x1 - x0) * W / pw), round((y1 - y0) * PANEL_H / ph)), Image.LANCZOS)
+    ox, oy = round((cx - pw / 2 - x0) * W / pw), round((cy - ph / 2 - y0) * PANEL_H / ph)
+    return big.crop((ox, oy, ox + W, oy + PANEL_H))
 
 
 def rec_frames(sc, charts, s):
@@ -269,7 +275,7 @@ def draw_markers(im, s, t, cur):
         if p <= 0:
             continue
         rgb = COLORS[m.get("color", "blue")]
-        x, y = to_panel(m["x"], m["y"], cur)
+        x, y = to_panel(m["x"], m["y"], cur) if "x" in m else (0, 0)
         if m["type"] == "dot":
             r = 13 * ease(p)
             d.ellipse((x - r, y - r, x + r, y + r), fill=rgb + (255,), outline=(255, 255, 255, 255), width=4)
@@ -279,6 +285,15 @@ def draw_markers(im, s, t, cur):
             if m.get("text"):   # 点の左上に置く(右側は値動きの続きがあるため)
                 d.text((x - 26, y - 34), m["text"], font=font(F_HEAD, 40), anchor="rm", fill=rgb + (int(255 * min(1, p)),),
                        stroke_width=6, stroke_fill=BG + (255,))
+        elif m["type"] == "pattern":    # チャート上にパターンの形(折れ線)を描いていく。ラベルは点ごと
+            pts = [to_panel(x, y, cur) for x, y in m["points"]]
+            part = poly_part(pts, ease(p / max(m.get("draw", 1.0) / 0.3, 1e-3)))
+            d.line(part, fill=rgb + (230,), width=m.get("width", 7), joint="curve")
+            for (lx, ly, text) in m.get("labels", []):
+                px, py = to_panel(lx, ly, cur)
+                if part[-1][0] >= px - 2:
+                    d.text((px, py), text, font=font(F_HEAD, 38), anchor="mm", fill=rgb + (255,),
+                           stroke_width=6, stroke_fill=BG + (255,))
         elif m["type"] == "ring":
             r = m.get("r", 30) * W / cur[2] * (0.85 + 0.15 * ease(p))
             d.ellipse((x - r, y - r, x + r, y + r), outline=rgb + (int(255 * min(1, p)),), width=8)
@@ -746,6 +761,18 @@ def frame(sc, charts, i, t):
     k = ease_io(t / dur) if vivid else ease(t / dur)
     im = Image.new("RGB", (W, H), BG)
     head = None
+    global PANEL_Y
+    base_panel = PANEL_Y
+    if "panel_y" in s:          # カットごとに帯の高さを変える(縦書きと重ねない)。[始め, 終わり] なら動かす
+        py = s["panel_y"]
+        PANEL_Y = round(py[0] + (py[1] - py[0]) * k) if isinstance(py, list) else py
+    try:
+        return _frame(sc, charts, i, t, s, dur, vivid, k, im, head, base_panel)
+    finally:
+        PANEL_Y = base_panel
+
+
+def _frame(sc, charts, i, t, s, dur, vivid, k, im, head, base_panel):
     if s.get("diagram"):
         draw_diagram(im, s["diagram"], t, dur)
     elif "card" not in s:
@@ -833,8 +860,8 @@ def frame(sc, charts, i, t):
     if sc.get("layout") == "tate" and s.get("tate"):
         tt = s["tate"]
         n = int(t * sc.get("type_cps", TYPE_CPS)) + 1 if s.get("type", True) else len(tt)
-        draw_tate(im, tt, font(F_HEAD, 104), INK if s.get("color", "blue") != "red" else COLORS["red"], n,
-                  s.get("tate_side", "left"))
+        draw_tate(im, tt, font(F_HEAD, s.get("tate_size", 104)), INK if s.get("color", "blue") != "red" else COLORS["red"], n,
+                  s.get("tate_side", "left"), y_top=base_panel + 20)
         d = ImageDraw.Draw(im)
     if cap:
         f = font(F_CAP, 60)

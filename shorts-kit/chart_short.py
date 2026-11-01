@@ -965,8 +965,10 @@ def _frame(sc, charts, i, t, s, dur, vivid, k, im, head, base_panel):
             dl = ImageDraw.Draw(layer)
             cx, cy, pw = cur
             ph = pw * PANEL_H / W
-            for j, (x, y, text, color) in enumerate(s["callouts"]):
-                p = ease((t - 0.3 - 0.15 * j) / 0.25)
+            for j, co in enumerate(s["callouts"]):
+                x, y, text, color = co[:4]
+                t_on = co[4] if len(co) > 4 else 0.3 + 0.15 * j     # 5 番目があれば出す秒
+                p = ease((t - t_on) / 0.25)
                 if p <= 0:
                     continue
                 mx, my = (x - cx + pw / 2) / pw * W, (y - cy + ph / 2) / ph * PANEL_H + PANEL_Y + 18 * (1 - p)

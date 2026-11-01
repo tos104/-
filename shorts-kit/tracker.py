@@ -13,9 +13,11 @@ CHANNELS = {
     "tt": "UC3oXfarxiGrU2TigmMBWhfg",      # ティーティーチャンネル(委託元)
     "mii": "UCCPmaRgms9FjAci2QnQR-SA",     # Miiのポケカタイム(参考)
     "taihei": "UCdBU4qCDToP-H_ImP1kqkKg",  # タイヘイ@サウスTV(参考)
+    "nori": "UCJonPb2guwqZZeeesjyGNUg",    # nori(FX)。ショート枠の制作はユーザー担当・Studio なし(2026-11-01)
 }
 OWN = "tt"
 OWN_DETAIL = 15  # 委託元の最新N本は高評価数と投稿日も取る
+DETAIL = {OWN: OWN_DETAIL, "nori": 15}  # 高評価・コメント・投稿日を取るチャンネルと本数
 # ユーザー(編集担当)が制作したショート。2026-10-19 時点の委託元の最新10本
 USER_MADE = {
     "ZBADKqDTgu8", "txtCZ6iEGZo", "7e7noqadTZg", "rIPhizoau0s", "6dyGxiIV2VU",
@@ -36,9 +38,13 @@ def detail(vid):
     except Exception:  # 動画詳細(next)が拒否されても、再生数と登録者の記録は続ける
         return {"likes": None, "date": None}
     s = json.dumps(d, ensure_ascii=False)
-    likes = re.search(r'"likeCountIfIndifferentNumber": "(\d+)"', s)
+    # 高評価: 旧形式 likeCountIfIndifferentNumber、無ければ「他 N 人もこの動画を高く評価しました」(2026-11 時点の形式)
+    likes = re.search(r'"likeCountIfIndifferentNumber": "(\d+)"', s) or re.search(r"他 ([\d,]+) 人もこの動画を高く評価しました", s)
+    comments = next((txt(r.get("contextualInfo")) for r in walk(d, "engagementPanelTitleHeaderRenderer")
+                     if txt(r.get("title")) == "コメント"), None)
     p = next(walk(d, "videoPrimaryInfoRenderer"), {})
-    return {"likes": int(likes.group(1)) if likes else None, "date": txt(p.get("dateText"))}
+    return {"likes": int(likes.group(1).replace(",", "")) if likes else None,
+            "comments": int(views(comments)) if comments else None, "date": txt(p.get("dateText"))}
 
 
 def snapshot():
@@ -47,7 +53,7 @@ def snapshot():
         items = []
         for i, (vid, title, vc) in enumerate(shorts(bid, pages=4)):
             it = {"id": vid, "title": re.split(r"\s#|＃", title or "")[0].strip(), "views": int(views(vc))}
-            if name == OWN and i < OWN_DETAIL:
+            if i < DETAIL.get(name, 0):
                 it.update(detail(vid))
             items.append(it)
         snap["channels"][name] = {"subs": subs(bid), "shorts": items}
@@ -80,10 +86,14 @@ def report(hours):
         for x in new:
             print(f"  NEW  {x['views']:>8,}  {x['title'][:40]}")
         grow = sorted([r for r in rows if r[0] is not None], key=lambda r: -r[0])
-        for d, x in grow[:5 if name != OWN else OWN_DETAIL]:
+        for d, x in grow[:DETAIL.get(name, 5)]:
             extra = ""
-            if "likes" in x and x["likes"] is not None and x["views"]:
-                extra = f"  高評価率 {x['likes'] / x['views'] * 100:.1f}%  {x.get('date', '')}"
+            if x.get("likes") is not None and x["views"]:
+                extra = f"  高評価率 {x['likes'] / x['views'] * 100:.1f}%"
+            if x.get("comments") is not None and x["views"]:
+                extra += f"  コメント {x['comments']}"
+            if x.get("date"):
+                extra += f"  {x['date']}"
             mark = "[自作]" if x["id"] in USER_MADE else "      "
             print(f"  {d:+8,}  計{x['views']:>8,}  {mark} {x['title'][:40]}{extra}")
 

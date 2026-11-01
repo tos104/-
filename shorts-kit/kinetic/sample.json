@@ -1,0 +1,16 @@
+{"bpm": 128, "fps": 30, "hud": "KINETIC TEST",
+ "palette": [{"bg":"#ff3b1f","fg":"#111111","accent":"#ffffff"},
+             {"bg":"#111111","fg":"#ffffff","accent":"#ff3b1f"},
+             {"bg":"#f4f0e6","fg":"#111111","accent":"#ffd400"}],
+ "beats": [
+  {"text":"編集ソフト","style":"slam","pal":1,"cam":"push","why":"冒頭0.5秒で主題を出す"},
+  {"text":"なし。","style":"slam","pal":0,"burst":true,"stack":true,"se":"impact","se_gain":0.5,"why":"否定で引っかかりを作る"},
+  {"text":"コードで","style":"slide","pal":2,"cam":"whip","se":"whoosh","why":"手段の提示"},
+  {"text":"動く","style":"pop","pal":2,"stack":true,"cam":"push","why":"手段→結果を1拍で"},
+  {"text":"文字","style":"tilt3d","pal":1,"len":2,"ghost":"A","cam":"roll","why":"3Dの見せ場。2拍で溜める"},
+  {"text":"1拍に","style":"type","pal":0,"why":"作り方の要点1"},
+  {"text":"1語。","style":"slam","pal":0,"stack":true,"burst":true,"se":"impact","se_gain":0.5,"why":"要点1の着地"},
+  {"text":"同じ台本","style":"slide","pal":1,"se":"whoosh","why":"要点2: 再現性"},
+  {"text":"同じ映像","style":"slam","pal":2,"stack":true,"cam":"pull","why":"要点2の着地"},
+  {"text":"END","style":"pop","pal":0,"len":2,"burst":true,"se":"ding","why":"終わりの合図"}
+ ]}

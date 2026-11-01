@@ -149,7 +149,107 @@ def bgm(dur, bpm=84, seed=3):
     return _norm(out * np.clip(fade, 0, 1), 0.5)
 
 
-SOUNDS = {"logo": logo, "riser": riser, "whoosh": whoosh, "pop": pop, "impact": impact, "kira": kira, "drumroll": drumroll, "ding": ding}
+def _room(x, tail=1.1, wet=0.28, seed=11):
+    """小さな部屋の残響(減衰するノイズを畳み込む)。音に厚みと広がりを足す。"""
+    r = np.random.default_rng(seed)
+    n = int(tail * SR)
+    ir = r.standard_normal(n) * np.exp(-np.arange(n) / SR * (6.9 / tail))
+    ir = _lowpass(ir, 5000)
+    ir /= np.sqrt(np.sum(ir ** 2))
+    m = len(x) + n - 1
+    size = 1 << (m - 1).bit_length()
+    y = np.fft.irfft(np.fft.rfft(x, size) * np.fft.rfft(ir, size), size)[:m]
+    out = np.concatenate([x, np.zeros(n - 1)])
+    return out * (1 - wet) + y * wet * (np.max(np.abs(x)) / (np.max(np.abs(y)) or 1))
+
+
+def swish(dur=0.45):
+    """ペンで線を引く音(高めの帯域のノイズが通り過ぎる)。線・パターンを描く所。"""
+    t = _t(dur)
+    env = np.sin(np.pi * np.minimum(1, t / dur)) ** 1.5
+    x = _lowpass(rng.standard_normal(len(t)), 1500 + 6500 * t / dur)
+    x = x - _lowpass(x, 900)                  # 低い所を削ってこすれる音に
+    return _norm(_room(x * env, 0.5, 0.2), 0.42)
+
+
+def tape(dur=1.8):
+    """早送り(チャートを流す所)。細かいカチカチが速くなり、空気の音が上がっていく。"""
+    t = _t(dur)
+    out = np.zeros_like(t)
+    pos, gap = 0.0, 0.09
+    while pos < dur - 0.02:
+        i, n = int(pos * SR), int(0.012 * SR)
+        out[i:i + n] += np.sin(2 * np.pi * 3200 * np.arange(n) / SR) * np.exp(-np.arange(n) / SR * 400) * 0.5
+        pos += gap
+        gap = max(0.03, gap * 0.93)
+    air = _lowpass(rng.standard_normal(len(t)), 400 + 5000 * (t / dur) ** 1.5) * (t / dur) * 0.6
+    fade = np.minimum(1, (dur - t) / 0.08)
+    return _norm(_room((out + air) * fade, 0.6, 0.18), 0.5)
+
+
+def boom(dur=0.9):
+    """重い衝撃(ネックラインを抜けて落ちる所)。低い沈み込み + 割れる音 + 残響。"""
+    t = _t(dur)
+    f = 90 * np.exp(-t * 5) + 34
+    sub = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t * 4)
+    crack = _lowpass(rng.standard_normal(len(t)), 3500) * np.exp(-t * 35)
+    x = np.tanh(2.5 * (sub + 0.6 * crack))
+    return _norm(_room(x, 1.2, 0.3), 0.95)
+
+
+def fail(dur=0.5):
+    """だめ(× の所)。低い 2 音が下がる、こもった音。"""
+    t = _t(dur)
+    out = np.zeros_like(t)
+    for k, f in enumerate([233.1, 174.6]):
+        d = int(k * 0.16 * SR)
+        tt = t[: len(t) - d]
+        sq = np.tanh(4 * np.sin(2 * np.pi * f * tt))
+        out[d:] += _lowpass(sq, 1400) * np.exp(-tt * 9)
+    return _norm(_room(out, 0.5, 0.15), 0.6)
+
+
+def chime(dur=1.2):
+    """エントリーの合図。鐘のような倍音(整数倍からずらす)+ 残響。"""
+    t = _t(dur)
+    x = np.zeros_like(t)
+    for f, a, dk in [(1760, 1.0, 3.5), (1760 * 2.76, 0.45, 6), (1760 * 5.4, 0.2, 9), (880, 0.35, 3)]:
+        x += a * np.sin(2 * np.pi * f * t) * np.exp(-t * dk)
+    x *= np.minimum(1, t / 0.003)
+    return _norm(_room(x, 1.0, 0.3), 0.5)
+
+
+def tick(dur=0.06):
+    """段階が変わる・文字が出る所の小さな音。"""
+    t = _t(dur)
+    x = np.sin(2 * np.pi * 2400 * t) * np.exp(-t * 120) + 0.4 * _lowpass(rng.standard_normal(len(t)), 6000) * np.exp(-t * 200)
+    return _norm(_room(x, 0.3, 0.15), 0.4)
+
+
+def sparkle(dur=1.4):
+    """きらっ(3段目に届いた所・まとめの最後)。上がっていく高い音の粒 + 残響。"""
+    t = _t(dur)
+    out = np.zeros_like(t)
+    for k, f in enumerate([1568, 2093, 2637, 3136, 4186, 5274]):
+        d = int(k * 0.045 * SR)
+        tt = t[: len(t) - d]
+        out[d:] += np.sin(2 * np.pi * f * tt) * np.exp(-tt * 6) * (0.85 ** k)
+    return _norm(_room(out, 1.2, 0.35), 0.42)
+
+
+def dive(dur=2.4):
+    """下へ加速していく音(3段目まで落ちる所)。下がる音程 + 強くなる空気の音。"""
+    t = _t(dur)
+    f = 900 * (0.18 ** (t / dur))
+    tone = np.sin(2 * np.pi * np.cumsum(f) / SR)
+    air = _lowpass(rng.standard_normal(len(t)), 300 + 3000 * t / dur)
+    env = (t / dur) ** 1.2 * np.minimum(1, (dur - t) / 0.05)
+    return _norm(_room((0.5 * tone + 0.6 * air) * env, 0.6, 0.2), 0.45)
+
+
+SOUNDS = {"logo": logo, "riser": riser, "whoosh": whoosh, "pop": pop, "impact": impact, "kira": kira, "drumroll": drumroll,
+          "ding": ding, "swish": swish, "tape": tape, "boom": boom, "fail": fail, "chime": chime, "tick": tick,
+          "sparkle": sparkle, "dive": dive}
 
 
 def get(name):

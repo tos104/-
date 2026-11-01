@@ -847,6 +847,32 @@ def draw_steps(im, t, dur, s):
     prev_x = steps[st - 1]["x"] if st else g["path"][0][0]
     cur = steps[st]
     x_now = prev_x + (cur["x"] - prev_x) * ease_io((t - cur["t"]) / cur.get("draw", 1.0))
+    for rb in g.get("ribbons", []):    # MAribbon(2 本の移動平均線と間の塗り)。値動きと一緒に右へ伸ばす
+        xs = np.array([q[0] for q in rb["a"]], float)
+        n = int(np.searchsorted(xs, x_now, side="right"))
+        if n < 2:
+            continue
+        ya = np.array([q[1] for q in rb["a"]], float)[:n]
+        yb = np.array([q[1] for q in rb["b"]], float)[:n]
+        pa = [P((x, y)) for x, y in zip(xs[:n], ya)]
+        pb = [P((x, y)) for x, y in zip(xs[:n], yb)]
+        layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
+        dl = ImageDraw.Draw(layer)
+        up = ya < yb                    # 速い線が上 = 上向き
+        j = 0
+        while j < n - 1:                # 向きが同じ区間ごとに塗る
+            k2 = j
+            while k2 < n - 1 and up[k2 + 1] == up[j]:
+                k2 += 1
+            seg = slice(j, min(n, k2 + 2))
+            poly = pa[seg] + pb[seg][::-1]
+            if len(poly) >= 3:
+                dl.polygon(poly, fill=tuple(rb["up_fill" if up[j] else "down_fill"]))
+            j = k2 + 1
+        im.paste(layer, (0, 0), layer)
+        d = ImageDraw.Draw(im)
+        d.line(pb, fill=tuple(rb["b_color"]), width=4, joint="curve")
+        d.line(pa, fill=tuple(rb["a_color"]), width=4, joint="curve")
     d = ImageDraw.Draw(im)
     gray = (90, 90, 96)
     for it in g["items"]:          # 段階が来たら 0.4 秒で描く

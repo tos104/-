@@ -604,7 +604,58 @@ def draw_sketch(im, t, dur):
     d.text((W - 40, by1 + 120), "模式図", font=font(F_TAG, 30), fill=(90, 96, 104), anchor="rm")
 
 
+PATTERNS = {
+    # 教科書的な形(自前で描く模式図)。座標は帯の中(幅 1080・高さ 780)
+    "dtop": {"path": [(120, 640), (330, 230), (480, 420), (650, 235), (820, 470), (960, 650)],
+             "neck": 420, "labels": [((330, 190), "1つ目の山"), ((650, 195), "2つ目の山")],
+             "signal": (783, 420), "signal_text": "売りの合図", "width": None},
+    "hs": {"path": [(80, 640), (250, 300), (390, 430), (540, 170), (690, 430), (830, 300), (960, 640)],
+           "neck": 430, "labels": [((250, 260), "左肩"), ((540, 130), "頭"), ((830, 260), "右肩")],
+           "signal": (889, 430), "signal_text": "売りの合図", "width": (250, 300)},
+}
+
+
+def draw_pattern(im, name, t, dur):
+    """チャートパターンの模式図を線で描いていく。山 → ネックライン → 割れたら売りの順。
+    縦書きの下(画面の中ほど)に 0.65 倍で置く。"""
+    g = PATTERNS[name]
+    d = ImageDraw.Draw(im)
+    sc_, ox, oy = 0.65, 189, 1095
+    T = lambda x, y: (ox + x * sc_, oy + y * sc_)
+    k = t / max(dur * 0.55, 0.1)
+    raw = poly_part(g["path"], k)
+    pts = [T(x, y) for x, y in raw]
+    if len(pts) > 1:
+        d.line(pts, fill=INK, width=8, joint="curve")
+    for (x, y), text in g["labels"]:
+        if raw[-1][0] >= x:
+            d.text(T(x, y), text, font=font(F_HEAD, 34), fill=INK, anchor="mm")
+    p = ease((t - dur * 0.45) / 0.4)
+    ny = T(0, g["neck"])[1]
+    if p > 0:                  # ネックライン(左から引く)
+        x0, x1 = T(60, 0)[0], T(1020, 0)[0]
+        xx = x0
+        while xx < x0 + (x1 - x0) * p:
+            d.line((xx, ny, min(xx + 20, x1), ny), fill=COLORS["blue"], width=5)
+            xx += 32
+        if p >= 1:
+            d.text((x0, ny + 14), "ネックライン", font=font(F_HEAD, 32), fill=COLORS["blue"], anchor="la")
+    if g["width"] and t > dur * 0.62:   # 三尊: 肩からネックラインの値幅
+        sx, sy = T(*g["width"])
+        d.line((sx - 45, sy, sx - 45, ny), fill=COLORS["red"], width=4)
+        d.text((sx - 55, (sy + ny) / 2), "値幅", font=font(F_HEAD, 30), fill=COLORS["red"], anchor="rm")
+    if raw[-1][0] >= g["signal"][0] and t > dur * 0.55:
+        x, y = T(*g["signal"])
+        r = 14
+        d.ellipse((x - r, y - r, x + r, y + r), fill=COLORS["red"], outline=(255, 255, 255), width=4)
+        d.text((x + 24, y + 30), g["signal_text"], font=font(F_HEAD, 32), fill=COLORS["red"], anchor="la",
+               stroke_width=5, stroke_fill=BG)
+    d.text((W - 60, T(0, 690)[1]), "模式図", font=font(F_TAG, 28), fill=(90, 96, 104), anchor="rm")
+
+
 def draw_diagram(im, name, t, dur):
+    if name in PATTERNS:
+        return draw_pattern(im, name, t, dur)
     if name == "sketch":
         return draw_sketch(im, t, dur)
     if name == "staged":

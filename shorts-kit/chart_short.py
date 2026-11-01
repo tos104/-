@@ -94,6 +94,7 @@ def find_box(arr):
 class Charts:
     def __init__(self, base, look=None):
         self.base, self.cache, self.look = base, {}, look
+        self.rec_white = None     # 台本の "rec_white" で録画ごとに消す部品の範囲を変える
 
     def to_bg(self, arr):
         """白地を背景色にする。既定は乗算(全体が少し沈む)。vivid は白だけを抜いて、色の彩度を上げる。"""
@@ -138,7 +139,7 @@ class Charts:
                 raw = subprocess.run(cmd, capture_output=True, check=True).stdout
             arr = np.frombuffer(raw, np.uint8).reshape(-1, 588, 1280, 3).copy()
             heads = [Image.fromarray(a[REC_HEAD[1]:REC_HEAD[3], REC_HEAD[0]:REC_HEAD[2]]) for a in arr]
-            for x0, y0, x1, y1 in REC_WHITE:
+            for x0, y0, x1, y1 in self.rec_white or REC_WHITE:
                 arr[:, y0:y1, x0:x1] = 255
             frames = [Image.fromarray(m) for m in self.to_bg(arr)]
             if r0 > r1:
@@ -208,6 +209,17 @@ def source(sc, charts, s, t, view):
             x0, x1 = rv["x"]
             edge = int(x0 + (x1 - x0) * min(1.0, t / rv.get("until", s["dur"])))
             out[:, edge + 1:] = BG
+            if rv.get("band"):
+                # まだ出していない右側にも、元の帯を元の色・太さのまま残す(帯の画素だけ元の絵から写す)
+                top, bottom, right = rv["band"]      # 録画の画素(帯の上端・下端・右端)
+                src = np.asarray(img).astype(int)
+                seg = src[top:bottom + 1, edge + 1:right + 1]
+                bluish = (seg[..., 2] - seg[..., 0]) > 10
+                fill = np.median(src[(top + bottom) // 2, 40:edge][(src[(top + bottom) // 2, 40:edge, 2]
+                                                                      - src[(top + bottom) // 2, 40:edge, 0]) > 10], axis=0) \
+                    if edge > 60 else np.array([226, 237, 245])
+                region = np.where(bluish[..., None], seg, fill.astype(int))
+                out[top:bottom + 1, edge + 1:right + 1] = region.astype(np.uint8)
             if rv.get("box"):
                 top, bottom, right = rv["box"]       # 録画の画素(上辺・下辺・右端)
                 src = np.asarray(img)
@@ -218,6 +230,19 @@ def source(sc, charts, s, t, view):
                     out[bottom - 2:bottom + 2, edge + 1:right + 2] = line
                     out[top:bottom + 2, right - 1:right + 2] = line
             img = Image.fromarray(out)
+        if s.get("erase_lines"):    # 細い灰色の水平に近い線を消す(上下が白い所だけ。ローソク足やヒゲは残す)
+            a = np.asarray(img).copy()
+            ai = a.astype(int)
+            for x0, y0, x1, y1 in s["erase_lines"]:
+                for x in range(max(0, x0), min(a.shape[1], x1 + 1)):
+                    yc = y0 + (y1 - y0) * (x - x0) / (x1 - x0)
+                    for y in range(int(yc) - 2, int(yc) + 3):
+                        if 4 <= y < a.shape[0] - 4:
+                            px = ai[y, x]
+                            if px.max() - px.min() < 25 and px.min() > 60 and (ai[y - 4, x].min() > 190
+                                                                                or ai[y + 4, x].min() > 190):
+                                a[y, x] = BG
+            img = Image.fromarray(a)
         return charts.finish(rec_crop(img, view)), heads[j]
     return charts.finish(charts.view(s["img"], view, s.get("anchor"))), None
 
@@ -922,6 +947,7 @@ def main():
     F_TAG = os.path.join(HERE, "fonts", sc["font_tag"]) if "font_tag" in sc else F_TAG
     charts = Charts(os.path.join(os.path.dirname(os.path.abspath(a.script)), sc["assets"]), sc.get("look"))
     charts.rec_path = lambda sc: os.path.join(charts.base, sc["rec_file"])
+    charts.rec_white = [tuple(r) for r in sc["rec_white"]] if "rec_white" in sc else None
     if a.board:
         board(sc, charts, a.board)
     if a.out:

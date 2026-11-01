@@ -23,6 +23,10 @@ USER_MADE = {
     "ZBADKqDTgu8", "txtCZ6iEGZo", "7e7noqadTZg", "rIPhizoau0s", "6dyGxiIV2VU",
     "4GwmFP4k_1I", "cTuUUFNXvxw", "XZ4g7t7YDWE", "T9rCs5nbruk", "WURV6jE4dbs",
 }
+# TikTok はプロフィールの公開ページにある合計値だけ(フォロワー・いいね・投稿数)。投稿ごとの再生数は
+# ログインなしでは取れない(内部APIを回避して取る方法は使わない) → TikTok Studio のスクショで補う
+TIKTOK = {"pokanuma": "collezbzrx9"}  # ポケカ沼 LIVE(オリパ)
+# Instagram(タンガテーブル tangatable_cafe_hostel)はログイン画面に飛ばされ取れない(2026-11-01 確認) → インサイトのスクショで補う
 DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "snapshots.jsonl")
 
 
@@ -47,6 +51,16 @@ def detail(vid):
             "comments": int(views(comments)) if comments else None, "date": txt(p.get("dateText"))}
 
 
+def tiktok(user):
+    import urllib.request
+    try:
+        h = urllib.request.urlopen(f"https://www.tiktok.com/@{user}", timeout=30).read().decode("utf-8", "ignore")
+        m = re.search(r'"stats":\{"followerCount":(\d+),"followingCount":\d+,"heart":(\d+),[^}]*"videoCount":(\d+)', h)
+        return {"followers": int(m.group(1)), "likes": int(m.group(2)), "videos": int(m.group(3))} if m else None
+    except Exception:
+        return None
+
+
 def snapshot():
     snap = {"ts": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), "channels": {}}
     for name, bid in CHANNELS.items():
@@ -57,6 +71,7 @@ def snapshot():
                 it.update(detail(vid))
             items.append(it)
         snap["channels"][name] = {"subs": subs(bid), "shorts": items}
+    snap["tiktok"] = {name: tiktok(u) for name, u in TIKTOK.items()}
     os.makedirs(os.path.dirname(DATA), exist_ok=True)
     with open(DATA, "a", encoding="utf-8") as f:
         f.write(json.dumps(snap, ensure_ascii=False) + "\n")
@@ -73,6 +88,13 @@ def report(hours):
         prev = min(snaps[:-1], key=lambda s: abs(t(s) - target))
     span = (t(cur) - t(prev)).total_seconds() / 3600 if prev else 0
     print(f"# {cur['ts']}  (比較: {prev['ts'] if prev else 'なし'} / {span:.1f}時間)")
+    for name, tk in cur.get("tiktok", {}).items():
+        p = (prev or {}).get("tiktok", {}).get(name) or {}
+        if tk:
+            print(f"\n## TikTok {name}  フォロワー {tk['followers']} ({tk['followers'] - p.get('followers', tk['followers']):+})"
+                  f"  いいね計 {tk['likes']} ({tk['likes'] - p.get('likes', tk['likes']):+})  投稿 {tk['videos']} ({tk['videos'] - p.get('videos', tk['videos']):+})")
+        else:
+            print(f"\n## TikTok {name}  取得失敗")
     for name, ch in cur["channels"].items():
         pch = prev["channels"].get(name, {}) if prev else {}
         before = {x["id"]: x for x in pch.get("shorts", [])}

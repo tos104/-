@@ -239,8 +239,18 @@ def source(sc, charts, s, t, view):
         img = Image.fromarray((a.astype(np.float32) * np.array(BG, np.float32) / 255).astype(np.uint8)
                               if BG != (255, 255, 255) else a)
         cx, cy, pw = view
-        assert abs(k - 1) < 1e-6, "縦の縮尺が違う画像は own 座標で書く"
-        return rec_crop(img, [fx(cx), fy(cy), pw]), None     # 高画質の画像は輪郭強調しない
+        if abs(k - 1) < 1e-6:
+            return rec_crop(img, [fx(cx), fy(cy), pw]), None     # 高画質の画像は輪郭強調しない
+        # 縦の縮尺が違う画像: 基準画像と同じ価格の範囲を切り出して縦に伸ばす(画像を替えても値動きの位置がそろう)
+        ph = pw * PANEL_H / W
+        x0, x1, y0, y1 = fx(cx - pw / 2), fx(cx + pw / 2), fy(cy - ph / 2), fy(cy + ph / 2)
+        ix0, iy0 = int(np.floor(x0)), int(np.floor(y0))
+        canvas = Image.new("RGB", (int(np.ceil(x1)) - ix0 + 1, int(np.ceil(y1)) - iy0 + 1), BG)
+        canvas.paste(img, (-ix0, -iy0))
+        sx, sy = W / (x1 - x0), PANEL_H / (y1 - y0)
+        big = canvas.resize((round(canvas.width * sx), round(canvas.height * sy)), Image.LANCZOS)
+        ox, oy = round((x0 - ix0) * sx), round((y0 - iy0) * sy)
+        return big.crop((ox, oy, ox + W, oy + PANEL_H)), None
     if "rec" in s:
         frames, heads = rec_frames(sc, charts, s)
         j = min(len(frames) - 1, int(t * FPS)) if len(frames) > 1 else 0

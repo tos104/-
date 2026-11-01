@@ -1,0 +1,30 @@
+{
+ "assets": "../../output/fx_usdjpy_box/assets",
+ "pics": {"p0": {"file": "hq1022/p0.png", "L": 246, "y158": 437, "ppu": 427}, "p1": {"file": "hq1022/p1.png", "L": 246, "y158": 437, "ppu": 427}, "p2": {"file": "hq1022/p2.png", "L": 356, "y158": 512, "ppu": 552}, "p3": {"file": "hq1022/p3.png", "L": 378, "y158": 645, "ppu": 772}, "p4": {"file": "hq1022/p4.png", "L": 378, "y158": 645, "ppu": 772}, "p5": {"file": "hq1022/p5.png", "L": 384, "y158": 645, "ppu": 772}, "p6": {"file": "hq1022/p6.png", "L": 384, "y158": 645, "ppu": 772}, "p7": {"file": "hq1022/p7.png", "L": 428, "y158": 645, "ppu": 772}, "p8": {"file": "hq1022/p8.png", "L": 466, "y158": 645, "ppu": 772}, "p9": {"file": "hq1022/p9.png", "L": 466, "y158": 645, "ppu": 772}, "p10": {"file": "hq1022/p10.png", "L": 466, "y158": 645, "ppu": 772}, "p11": {"file": "hq1022/p11.png", "L": 471, "y158": 645, "ppu": 772}, "p12": {"file": "hq1022/p12.png", "L": 471, "y158": 645, "ppu": 772}, "p13": {"file": "hq1022/p13.png", "L": 466, "y158": 645, "ppu": 772}},
+ "ref": {"L": 471, "y158": 645, "ppu": 772},
+ "pic_white": [[0, 0, 2868, 112], [2745, 0, 2868, 1116], [0, 1062, 2868, 1116]],
+ "header": "",
+ "look": "vivid",
+ "fps": 60,
+ "type_cps": 24,
+ "layout": "tate",
+ "bg": [255, 255, 255],
+ "panel_y": 520,
+ "font_head": "ShipporiMincho-ExtraBold.ttf",
+ "font_cap": "ShipporiMincho-ExtraBold.ttf",
+ "font_tag": "ShipporiMincho-Medium.ttf",
+ "shots": [
+  {"pic": "p12", "reveal": {"x": [695, 695], "until": 0.01}, "dur": 2.6, "rect": [660, 712, 460], "rect_end": [662, 712, 450], "tate": "ダブルトップを\n割った瞬間に\n売ると…", "tate_side": "right", "tate_size": 92, "type": false, "markers": [{"type": "pattern", "points": [[480, 790], [545, 575], [592, 775], [662, 555], [688, 868]], "t": -1.0, "color": "red", "width": 7}, {"type": "dot", "x": 684, "y": 866, "t": -1.0, "color": "red", "text": "もし売ったら"}], "note": "HOOK。0 秒から実チャート上にダブルトップ(ユーザーのなぞりどおり)と、ネックラインを下ヒゲで割った足。※失敗例は元動画にない演出"},
+  {"pic": "p12", "reveal": {"x": [695, 790], "until": 2.0}, "dur": 2.8, "rect": [662, 712, 450], "rect_end": [730, 605, 700], "tate": "すぐ\nネックラインの\n上に戻される", "tate_side": "right", "tate_size": 92, "markers": [{"type": "dot", "x": 684, "y": 866, "t": -1.0, "color": "red"}, {"type": "arrow", "x": 692, "y": 850, "x2": 726, "y2": 440, "t": 0.6, "color": "red"}], "mark": [728, 410], "note": "失敗の結果。19日 0時台、割った直後に大きく戻す"},
+  {"pic": "p12", "reveal": {"x": [790, 2490], "until": 2.6}, "dur": 3.0, "rect": [725, 615, 650], "rect_end": [1450, 560, 2700], "panel_y": [520, 880], "tate": "待てる人\nはここが\n違う", "tate_side": "right", "tate_size": 80, "type": false, "note": "前のカットの画面から地続きで、引きながら右へ流す。ネックラインも一緒に伸びる"},
+  {"pic": "p12", "dur": 3.6, "rect": [1450, 560, 2700], "rect_end": [1450, 540, 2600], "panel_y": 880, "tate": "引いて\n見ると\n三尊", "tate_side": "right", "tate_size": 80, "markers": [{"type": "pattern", "points": [[480, 790], [730, 385], [900, 850], [1400, 85], [1685, 770], [2345, 290], [2480, 470]], "t": 0.3, "draw": 1.8, "color": "red", "width": 7}], "note": "ユーザーのなぞりどおり: 左肩=19日0時の上ヒゲ、頭=20日、右肩=22日朝(形成中)。表記なし"},
+  {"pic": "p11", "dur": 2.4, "rect": [2280, 560, 700], "rect_end": [2290, 560, 640], "trans": "wipe", "tate": "右肩で\n切り上げ\nライン", "tate_side": "right", "tate_size": 80, "note": "10:14 の画面。右肩を作っている途中の安値を結ぶ切り上げラインを左から現す", "panel_y": 880},
+  {"pic": "p8", "dur": 2.8, "rect": [2290, 560, 640], "rect_end": [2360, 560, 600], "trans": "wipe", "tate": "入り方①\n割れたら\n売り", "tate_side": "right", "tate_size": 80, "markers": [{"type": "dot", "x": 2497, "y": 560, "t": 0.8, "color": "blue", "text": "売り"}], "note": "10:29 の画面(青い矢印 1)。右肩形成中に切り上げラインを割ってエントリー(ユーザーの説明)", "panel_y": 880},
+  {"pic": "p7", "dur": 2.2, "rect": [2470, 740, 620], "rect_end": [2480, 745, 600], "tate": "ネック\nラインを\n割る", "tate_side": "right", "tate_size": 80, "note": "12:14 の画面。ネックラインを割る", "panel_y": 880},
+  {"pic": "p6", "dur": 1.6, "rect": [2480, 745, 600], "rect_end": [2490, 745, 600], "tate": "入り方②\n戻したら\n売り", "tate_side": "right", "tate_size": 80, "note": "14:14。ネックラインの下で戻りを待つ", "panel_y": 880},
+  {"pic": "p3", "dur": 2.6, "rect": [2490, 745, 600], "rect_end": [2500, 750, 620], "trans": "wipe", "tate": "入り方②\n戻したら\n売り", "tate_side": "right", "tate_size": 80, "markers": [{"type": "ring", "x": 2608, "y": 770, "r": 30, "t": 0.7, "color": "red"}], "note": "14:29(青い矢印 2)。ネックラインに戻して抑えられた所で売り。元動画『どちらでもよかった』", "panel_y": 880},
+  {"pic": "p0", "own": true, "dur": 3.4, "rect": [1380, 600, 2700], "rect_end": [1390, 600, 2620], "panel_y": 880, "tate": "決済は\n三尊\nチャネル", "tate_side": "right", "tate_size": 80, "callouts": [[2560, 710, "2段目", "ink"], [2560, 955, "3段目", "ink"]], "note": "20:29 の画面。元動画 10:59〜11:34。2段目・3段目は左肩〜ネックラインの値幅"},
+  {"pic": "p0", "own": true, "reveal": {"x": [2360, 2500], "until": 2.4}, "dur": 3.6, "rect": [2420, 860, 440], "rect_end": [2425, 870, 420], "tate": "勢いが\nあれば\n3段目", "tate_side": "right", "tate_size": 80, "callouts": [[2580, 735, "2段目", "ink"], [2580, 980, "3段目", "ink"]], "markers": [{"type": "ring", "x": 2495, "y": 996, "r": 16, "t": 2.4, "color": "red"}, {"type": "dot", "x": 2495, "y": 998, "t": 2.4, "color": "red", "text": "ヒゲでタッチ"}], "note": "2段目(y749)を割った所から足を出し、3段目(y995)まで。最後の下ヒゲが3段目にタッチ(実測)", "panel_y": 880},
+  {"card": "教育目的であり、金融・投資助言ではありません。取引判断はご自身で行ってください。", "dur": 2.0, "cta": "保存して、次のチャートで試す", "note": "免責"}
+ ]
+}

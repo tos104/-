@@ -202,8 +202,45 @@ def rec_frames(sc, charts, s):
     return charts.rec(charts.rec_path(sc), r[0], r[-1], n)
 
 
+_PIC_CACHE = {}
+
+
+def pic_image(sc, charts, name):
+    """高画質のスクリーンショット(台本の "pics")を読み、画面の部品("pic_white")を白で消す。"""
+    if name not in _PIC_CACHE:
+        info = sc["pics"][name]
+        a = np.asarray(Image.open(os.path.join(charts.base, info["file"])).convert("RGB")).copy()
+        for x0, y0, x1, y1 in sc.get("pic_white", []):
+            a[y0:y1, x0:x1] = 255
+        _PIC_CACHE[name] = a
+    return _PIC_CACHE[name]
+
+
+def pic_map(sc, s):
+    """基準画像(sc["ref"])の座標 → このカットの画像の座標。横は同じ縮尺で平行移動、縦は価格の目盛りで合わせる。
+    "own": true のカットは画像そのものの座標で書く。"""
+    if s.get("own"):
+        return lambda x: x, lambda y: y, 1.0
+    r, info = sc["ref"], sc["pics"][s["pic"]]
+    k = info["ppu"] / r["ppu"]
+    return (lambda x: x + info["L"] - r["L"]), (lambda y: info["y158"] + (y - r["y158"]) * k), k
+
+
 def source(sc, charts, s, t, view):
     """カットの t 秒の絵(帯の大きさ)と、録画の日時表示(なければ None)。"""
+    if "pic" in s:
+        a = pic_image(sc, charts, s["pic"])
+        fx, fy, k = pic_map(sc, s)
+        if s.get("reveal"):     # 足とネックラインを左から x まで出す(右側は背景)
+            x0, x1 = s["reveal"]["x"]
+            edge = int(fx(x0 + (x1 - x0) * min(1.0, t / s["reveal"].get("until", s["dur"]))))
+            a = a.copy()
+            a[:, max(0, edge + 1):] = 255
+        img = Image.fromarray((a.astype(np.float32) * np.array(BG, np.float32) / 255).astype(np.uint8)
+                              if BG != (255, 255, 255) else a)
+        cx, cy, pw = view
+        assert abs(k - 1) < 1e-6, "縦の縮尺が違う画像は own 座標で書く"
+        return rec_crop(img, [fx(cx), fy(cy), pw]), None     # 高画質の画像は輪郭強調しない
     if "rec" in s:
         frames, heads = rec_frames(sc, charts, s)
         j = min(len(frames) - 1, int(t * FPS)) if len(frames) > 1 else 0
@@ -254,10 +291,14 @@ def source(sc, charts, s, t, view):
 
 
 def start_key(s):
+    if "pic" in s:
+        return ("pic", s["pic"])
     return ("rec", s["rec"][0]) if "rec" in s else s.get("img")
 
 
 def end_key(s):
+    if "pic" in s:
+        return ("pic", s["pic"])
     return ("rec", s["rec"][-1]) if "rec" in s else s.get("img")
 
 

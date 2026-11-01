@@ -234,8 +234,18 @@ def source(sc, charts, s, t, view):
         if s.get("reveal"):     # 足とネックラインを左から x まで出す(右側は背景)
             x0, x1 = s["reveal"]["x"]
             edge = int(fx(x0 + (x1 - x0) * min(1.0, t / s["reveal"].get("until", s["dur"]))))
-            a = a.copy()
+            src, a = a, a.copy()
             a[:, max(0, edge + 1):] = 255
+            # 画面の青い矢印(純青)は、指している足(矢印の中心)まで出ていれば右半分も見せる(見切れ防止・ユーザー指定)
+            lo, hi = max(0, edge - 60), min(src.shape[1], edge + 60)
+            seg = src[:, lo:hi].astype(int)
+            arrow = (seg[..., 2] > 200) & (seg[..., 0] < 60) & (seg[..., 1] < 60)
+            cols = np.flatnonzero(arrow.any(axis=0))
+            for run in np.split(cols, np.flatnonzero(np.diff(cols) > 1) + 1) if len(cols) else []:
+                c0, c1 = lo + run[0], lo + run[-1]
+                if c1 > edge and (c0 + c1) / 2 <= edge + 8:     # 中心が最後の足の幅(約 8px)以内
+                    keep = arrow[:, run[0]:run[-1] + 1]
+                    a[:, c0:c1 + 1][keep] = src[:, c0:c1 + 1][keep]
         img = Image.fromarray((a.astype(np.float32) * np.array(BG, np.float32) / 255).astype(np.uint8)
                               if BG != (255, 255, 255) else a)
         cx, cy, pw = view
@@ -823,8 +833,74 @@ def frame(sc, charts, i, t):
         PANEL_Y = base_panel
 
 
+def draw_steps(im, t, dur, s):
+    """まとめの模式図(台本に書いた手順を 1 段階ずつ描く)。座標は基準画像の座標で書き、"xmap"(区切りごとの対応)と
+    "ymap"([基準 y, 画面 y, 倍率])で画面へ写す。値動きの折れ線は段階ごとの x まで描いて止める。"""
+    g = s["steps"]
+    xs_, xd_ = zip(*g["xmap"])
+    X = lambda x: float(np.interp(x, xs_, xd_))
+    y0r, y0s, ky = g["ymap"]
+    Y = lambda y: y0s + (y - y0r) * ky
+    P = lambda p: (X(p[0]), Y(p[1]))
+    steps = g["stages"]
+    st = max([j for j, st_ in enumerate(steps) if t >= st_["t"]] or [0])
+    prev_x = steps[st - 1]["x"] if st else g["path"][0][0]
+    cur = steps[st]
+    x_now = prev_x + (cur["x"] - prev_x) * ease_io((t - cur["t"]) / cur.get("draw", 1.0))
+    d = ImageDraw.Draw(im)
+    gray = (90, 90, 96)
+    for it in g["items"]:          # 段階が来たら 0.4 秒で描く
+        if st < it["step"]:
+            continue
+        p = ease((t - steps[it["step"]]["t"] - it.get("dt", 0)) / 0.4)
+        if p <= 0:
+            continue
+        col = COLORS.get(it.get("color"), gray)
+        if it["type"] == "band":         # ネックラインの抵抗帯(値動きと一緒に右へ伸ばす)
+            bx0 = X(it["x"][0])
+            bx1 = X(min(it["x"][1], max(x_now, it["x"][0])))
+            d.rectangle((bx0, Y(it["y"][0]), max(bx0 + 1, bx1), Y(it["y"][1])), fill=(198, 216, 236),
+                        outline=COLORS["blue"], width=4)
+            if it.get("label"):
+                d.text((bx0 + 8, Y(it["y"][1]) + 10), it["label"], font=font(F_HEAD, 30), fill=COLORS["blue"])
+        elif it["type"] == "line":
+            (ax, ay), (bx, by) = P(it["p"][0]), P(it["p"][1])
+            d.line((ax, ay, ax + (bx - ax) * p, ay + (by - ay) * p), fill=col, width=it.get("width", 5))
+            if it.get("label") and p >= 1:
+                d.text((bx + 10, by), it["label"], font=font(F_HEAD, 30), fill=col, anchor="lm")
+        elif it["type"] == "poly":       # 三尊の形(左肩・頭・右肩)
+            pts = poly_part([P(q) for q in it["points"]], p)
+            if len(pts) > 1:
+                d.line(pts, fill=col, width=it.get("width", 6), joint="curve")
+            if p >= 1:
+                for lx, ly, txt in it.get("labels", []):
+                    d.text(P((lx, ly)), txt, font=font(F_HEAD, 32), fill=col, anchor="md",
+                           stroke_width=5, stroke_fill=BG)
+        elif it["type"] == "dot":        # エントリーの点
+            x, y = P((it["x"], it["y"]))
+            r = 14 * p
+            d.ellipse((x - r, y - r, x + r, y + r), fill=col, outline=(255, 255, 255), width=4)
+            if p >= 1 and it.get("text"):
+                dx, dy = it.get("text_dxy", [26, 0])
+                d.text((x + dx, y + dy), it["text"], font=font(F_HEAD, 32), fill=col, anchor=it.get("anchor", "lm"),
+                       stroke_width=5, stroke_fill=BG)
+    pts = [P(q) for q in clip_path_x(g["path"], x_now)]
+    if len(pts) > 1:
+        d.line(pts, fill=INK, width=6, joint="curve")
+    # 段階の名前(図の上。切り替わるとき下から入る)
+    p = ease((t - cur["t"]) / 0.25)
+    layer = Image.new("RGBA", (W, 260), (0, 0, 0, 0))
+    ImageDraw.Draw(layer).multiline_text((50, 200 + 20 * (1 - p)), cur["name"], font=font(F_HEAD, 46), anchor="ld",
+                                         spacing=14, fill=INK + (int(255 * p),))
+    im.paste(layer, (0, g.get("title_y", 300)), layer)
+    d = ImageDraw.Draw(im)
+    d.text((g["xmap"][-1][1], g.get("tag_y", 1500)), "模式図", font=font(F_TAG, 30), fill=(90, 96, 104), anchor="rm")
+
+
 def _frame(sc, charts, i, t, s, dur, vivid, k, im, head, base_panel):
-    if s.get("diagram"):
+    if s.get("diagram") == "steps":
+        draw_steps(im, t, dur, s)
+    elif s.get("diagram"):
         draw_diagram(im, s["diagram"], t, dur)
     elif "card" not in s:
         crop = s.get("crop", s.get("rect"))

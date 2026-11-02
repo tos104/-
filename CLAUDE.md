@@ -34,3 +34,8 @@
 ## 改善のループ
 BRIEF → SYSTEM → FILM → REVIEW → BETTER SYSTEM
 投稿後の数値(`tracker.py`)を `PLAYBOOK.md` の実験ログに入れ、仮説とスタイルガイドを更新する。
+
+## セッション間の共有(2026-11-02 追加)
+- 知見・方針・数値は `shorts-kit/PLAYBOOK.md` に書き、**既定のブランチ `claude/shorts-kit` に push する**。別ブランチだけに書くと、ほかのセッションから見えない(2026-11-02 に実際に起きた)
+- 作業の最初に `git fetch origin claude/shorts-kit && git merge origin/claude/shorts-kit` で最新の PLAYBOOK を取り込む。別ブランチで作業するときも同じ
+- ユーザーに「〜のナレッジある？」と聞かれたら、まず `grep -n` で PLAYBOOK.md を探してから答える

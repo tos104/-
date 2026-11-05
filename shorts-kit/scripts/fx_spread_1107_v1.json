@@ -1,0 +1,25 @@
+{
+ "header": "",
+ "look": "vivid",
+ "fps": 60,
+ "type_cps": 24,
+ "layout": "tate",
+ "bg": [255, 255, 255],
+ "panel_y": 300,
+ "font_head": "ShipporiMincho-ExtraBold.ttf",
+ "font_cap": "ShipporiMincho-ExtraBold.ttf",
+ "font_tag": "ShipporiMincho-Medium.ttf",
+ "assets": ".",
+ "shots": [
+  {"diagram": "spread_q", "dur": 2.2, "tate": "FX会社は\n何もしなくても\n稼げる", "tate_side": "right", "tate_size": 80, "panel_y": 940, "note": "【常識破壊 4.31】1コマ目で題材と争点を全部見せる(4.97)。文字は打ち出さず最初から出す。「？」で答えを伏せる。元動画 10:04「何もすることない」/11:08「何もしなくても増えていく」", "sfx": [["boom", 0.0, 0.55]], "type": false},
+  {"diagram": "spread", "dur": 2.4, "tate": "理由は\nスプレッド", "tate_side": "right", "tate_size": 80, "panel_y": 940, "note": "答えを 2 秒で出す(4.97)。2段テロップの 2 段目(4.3)。元動画 9:50", "sfx": [["pop", 0.05, 0.5], ["tick", 0.8, 0.45]]},
+  {"diagram": "dealer", "dur": 2.8, "tate": "ディーラーを\nやっていた時も\nそうだった", "tate_side": "right", "tate_size": 80, "panel_y": 940, "note": "根拠は本人の経験(4.45)。肩書きは書籍 p.7。元動画 9:46〜9:54", "sfx": [["tick", 0.3, 0.5]]},
+  {"diagram": "both", "dur": 2.6, "tate": "雇用統計の前\n買う人も\n売る人もいる", "tate_side": "right", "tate_size": 80, "panel_y": 940, "note": "仕組みの前半。元動画 10:10〜10:26", "sfx": [["swish", 0.3, 0.45], ["swish", 0.6, 0.4]]},
+  {"diagram": "cover", "dur": 2.6, "tate": "お客さん同士で\nカバー", "tate_side": "right", "tate_size": 80, "panel_y": 940, "note": "仕組みの後半。主役は矢印が会社で出会う所(4.87)。元動画 10:29", "sfx": [["chime", 0.8, 0.55]]},
+  {"diagram": "stay", "dur": 3.0, "tate": "ストップを\n置かない人は\n我慢して\n残る", "tate_side": "right", "tate_size": 80, "panel_y": 940, "note": "見ている人の行動につなげる。元動画 10:36〜11:01", "sfx": [["whoosh", 0.4, 0.45], ["fail", 1.4, 0.55]]},
+  {"diagram": "old_new", "dur": 2.4, "tate": "昔は\nスプレッドが\nもっと広かった", "tate_side": "right", "tate_size": 80, "panel_y": 940, "note": "差が大きい=取り分が大きい、を形で。元動画 11:08", "sfx": [["whoosh", 0.0, 0.45], ["pop", 0.8, 0.45]]},
+  {"diagram": "pairs", "dur": 3.2, "tate": "だから\nスプレッドの\n狭い通貨で", "tate_side": "right", "tate_size": 80, "panel_y": 940, "note": "結論=行動。通貨名は本人が出したもの。数字は出さない(4.45)。元動画 11:19〜11:32", "sfx": [["tick", 0.2, 0.45], ["tick", 0.5, 0.45], ["tick", 0.8, 0.45], ["chime", 1.2, 0.55]]},
+  {"diagram": "next", "dur": 2.4, "tate": "次は\n入り方", "tate_side": "right", "tate_size": 80, "panel_y": 940, "note": "【入り口→信頼 4.996】関連動画に 1022 を設定する案。※「次は入り方」は新しい文言(要承認)", "sfx": [["kira", 0.3, 0.45]]},
+  {"card": "教育目的であり、金融・投資助言ではありません。取引判断はご自身で行ってください。", "dur": 2.0, "cta": "保存して、次のチャートで試す", "note": "免責", "sfx": [["logo", 0.1, 0.55]], "panel_y": 520}
+ ]
+}

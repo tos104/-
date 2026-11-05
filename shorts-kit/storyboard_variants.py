@@ -320,7 +320,7 @@ def board(p, src, out_dir):
                 panels.append((b, None, ""))
         frames = [still(src, v["key"], b, t).resize((W // 3, H // 3), Image.LANCZOS) for b, t, _ in panels]
         tw, th = frames[0].size
-        sheet = Image.new("RGB", (16 + len(frames) * (tw + 16), th + 330), "white")
+        sheet = Image.new("RGB", (16 + len(frames) * (tw + 16), th + 520), "white")
         d = ImageDraw.Draw(sheet)
         d.text((20, 18), f"案{v['key']}  {v['name']}", font=font("dela", 44), fill=(30, 30, 30))
         d.text((20, 80), "構成: " + v["structure"], font=font("bold", 26), fill=(60, 60, 60))
@@ -336,6 +336,14 @@ def board(p, src, out_dir):
                 else:
                     line += ch
             d.text((x, yy), line, font=font("bold", 21), fill=(70, 70, 70))
+            if b.get("fx"):  # 演出(動き・効果・音)の指示を赤で
+                line, yy = "", yy + 34
+                for ch in "演出: " + b["fx"]:
+                    if d.textlength(line + ch, font=font("bold", 20)) > tw:
+                        d.text((x, yy), line, font=font("bold", 20), fill=(190, 40, 50)); yy += 26; line = ch
+                    else:
+                        line += ch
+                d.text((x, yy), line, font=font("bold", 20), fill=(190, 40, 50))
         out = os.path.join(out_dir, f"variant_{p['name']}_{v['key']}.png")
         sheet.save(out); print(out, sheet.size)
 

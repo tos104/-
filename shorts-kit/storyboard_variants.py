@@ -213,7 +213,14 @@ def layer_D2(b, t=None):
     f = font("dela", 96)
     while d.textlength(l2, font=f) > W - 80:
         f = font("dela", f.size - 4)
-    ctext(d, (W / 2, 240 if l1 else 195), l2, font("dela", int(f.size * big)), (255, 220, 60), 8)  # 1行だけのときは上の枠の中央に
+    y2 = 240 if l1 else 195  # 1行だけのときは上の枠の中央に
+    f2 = font("dela", int(f.size * big))
+    if tx.get("plate"):  # 座布団: 色の帯の上に白文字+黒フチ(スマホで潰れにくい)
+        tw = d.textlength(l2, font=f2)
+        d.rounded_rectangle((W / 2 - tw / 2 - 28, y2 - f2.size * 0.62, W / 2 + tw / 2 + 28, y2 + f2.size * 0.62), radius=18, fill=tuple(tx["plate"]))
+        ctext(d, (W / 2, y2), l2, f2, (255, 255, 255), 8)
+    else:
+        ctext(d, (W / 2, y2), l2, f2, (255, 220, 60), 8)
     vh = W * 9 // 16
     d.rectangle((0, VID_Y2 - 6, W, VID_Y2), fill=(255, 255, 255)); d.rectangle((0, VID_Y2 + vh, W, VID_Y2 + vh + 6), fill=(255, 255, 255))
     s = REC_S
@@ -230,11 +237,16 @@ def layer_D2(b, t=None):
     ctext(d, (W / 2, py0 + 60 * s), tx.get("head", ""), font("dela", int(50 * s)), (30, 30, 30))
     ctext(d, (W / 2, py0 + 112 * s), tx.get("sub", ""), font("bold", int(30 * s)), (120, 120, 120))
     d.line((px0 + 30, py0 + 150 * s, px1 - 30, py0 + 150 * s), fill=(150, 150, 150), width=3)
-    for k, (a, v) in enumerate(rows):
+    for k, row in enumerate(rows):
+        a, v = row[0], row[1]
+        hl = len(row) > 2 and row[2] == "big"  # 夢の金額は赤く特大、元手は小さく落ち着いた色(金額の差を見せる)
+        lo = len(row) > 2 and row[2] == "small"
         y = py0 + 195 * s + 84 * s * k
         d.text((px0 + 40, y), a, font=font("xb", int(44 * s)), fill=(40, 40, 40), anchor="lm")
         unk = v.startswith("？")  # まだ分からない欄は赤く大きく
-        d.text((px1 - 40, y), v, font=font("dela", int((70 if unk else 50) * s)), fill=(200, 40, 50) if v.startswith("ARS") or unk else (40, 40, 40), anchor="rm")
+        size = 70 if unk or hl else (42 if lo else 50)
+        col = (200, 40, 50) if v.startswith("ARS") or v.startswith("PSA") or unk or hl else ((90, 120, 100) if lo else (40, 40, 40))
+        d.text((px1 - 40, y), v, font=font("dela", int(size * s)), fill=col, anchor="rm")
     if tx.get("total"):
         y = py1 - 95 * s
         d.line((px0 + 30, y - 55 * s, px1 - 30, y - 55 * s), fill=(40, 40, 40), width=4)

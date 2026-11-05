@@ -639,7 +639,7 @@ def fx_stamp(c, t, sh):
         for ln, (x0, y0, x1, y1) in zip(sh["stamp"], boxes):
             d.text((260 - (x0 + x1) / 2, y - y0), ln, font=f, fill=ROSE)
             y += y1 - y0 + 18
-        st = st.rotate(-12, Image.BICUBIC)
+        st = st.rotate(12, Image.BICUBIC)  # 反時計回り = 右肩上がり
         put(c, st, 540, 640, alpha=min(1, k * 3), scale=1.7 - 0.7 * out_back(k, 1.0))
     a = out_cubic(prog(t, 0.6, 0.3))
     if a > 0:  # 文字の下に暗い板(写真がにぎやかでも読めるように)

@@ -13,8 +13,9 @@ SUB = (131, 144, 168)
 GRID = (227, 232, 239)
 BLUE, RED, GREEN, PEOPLE = (31, 122, 224), (216, 81, 58), (15, 165, 127), (91, 143, 214)
 BOX, SHELF_Y = (241, 244, 248), 1000
-F_BLACK = os.path.join(HERE, "fonts", "MPLUSRounded1c-Black.ttf")
-F_XB = os.path.join(HERE, "fonts", "MPLUSRounded1c-ExtraBold.ttf")
+F_BLACK = os.path.join(HERE, "fonts", "ShipporiMincho-ExtraBold.ttf")   # nori のテクニカル動画と同じ(ユーザー指定 2026-11-06)
+F_XB = os.path.join(HERE, "fonts", "ShipporiMincho-ExtraBold.ttf")
+F_MED = os.path.join(HERE, "fonts", "ShipporiMincho-Medium.ttf")
 _fc = {}
 
 
@@ -177,7 +178,7 @@ def pill(im, text, y=330, k=1.0, cursor=False):
 
 
 def note(im, text, x=40, y=930):
-    ImageDraw.Draw(im).text((x, y), text, font=F(30, F_XB), fill=SUB)
+    ImageDraw.Draw(im).text((x, y), text, font=F(30, F_MED), fill=SUB)
 
 
 def arrow(im, x0, y0, x1, y1, col, w=8, k=1.0):

@@ -290,12 +290,76 @@ def layer_D2(b, t=None):
     full = {"cx": 320, "cy": 180, "zoom": 1.0}
     return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.55), slot(b["t"], 0, VID_Y2, W, vh, full, slide=True)]
 
-LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2}
+
+# ---- C: サムネ特化(briefs/mewtwo_typeC.md)。最初と最後は「左にカード(白フチ)・右に短い行」、中盤は映像+下に字幕2行 ----
+C_BG, C_SAFE_R = (40, 34, 30), 940
+
+
+def c_text(d, xy, s, fo, fill):  # 黒フチ+右下に黒い影
+    x, y = xy
+    d.text((x + 8, y + 10), s, font=fo, fill=(0, 0, 0), anchor="mm", stroke_width=8, stroke_fill=(0, 0, 0))
+    d.text((x, y), s, font=fo, fill=fill, anchor="mm", stroke_width=8, stroke_fill=(0, 0, 0))
+
+
+def c_fit(d, s, size, maxw, kind="dela"):
+    while size > 40 and d.textlength(s, font=font(kind, size)) + 16 > maxw:
+        size -= 4
+    return font(kind, size)
+
+
+def layer_C(b, t=None):
+    tx = b["texts"]
+    img = Image.new("RGBA", (W, H), C_BG + (255,)); d = ImageDraw.Draw(img)
+    pa = tx.get("pop_at")
+    big = 1.0
+    if pa is not None and t is not None:
+        if t < pa:
+            tx = {**tx, **tx.get("before", {})}
+        else:
+            k = min(1.0, (t - pa) / 0.35)
+            big = 1 + 0.8 * (1 - k) ** 3 + 0.2 * math.sin(math.pi * k) * (1 - k)
+    if tx.get("side"):  # 左にカード、右に短い行
+        d.rectangle((30, 440, 530, 1360), fill=(255, 255, 255))
+        hole(img, (46, 456, 514, 1344))
+        lines = tx["side"]
+        y = 900 - (len(lines) - 1) * 150 / 2
+        for k, (s_, col, size) in enumerate(lines):
+            sc = big if (pa is not None and k == len(lines) - 1) else 1.0
+            c_text(d, (745, y), s_, c_fit(d, s_, int(size * sc), (C_SAFE_R - 560) * sc), tuple(col)); y += 150
+        if tx.get("cta"):
+            a, pill = tx["cta"]
+            c_text(d, (W / 2, 1530), a, c_fit(d, a, 60, 900, "black"), (255, 255, 255))
+            c_text(d, (W / 2, 1630), pill + " ▼", c_fit(d, pill + " ▼", 70, 900, "black"), (255, 230, 0))
+        sl = [slot(b["t"], 46, 456, 468, 888, b)]
+    else:  # 中盤: 映像は横幅いっぱい(拡大しない)、上下はぼかした同じ映像
+        vh = W * 9 // 16
+        vy = 240 + (1180 - vh) // 2
+        hole(img, (0, 240, W, 1420))
+        c1, c2 = tx.get("copy", ["", ""])
+        if c1:
+            c_text(d, (W / 2, 1500), c1, c_fit(d, c1, 70, 900, "black"), (255, 255, 255))
+        if c2:
+            c_text(d, (W / 2, 1620), c2, c_fit(d, c2, int(92 * big), 900 * big), tuple(tx.get("c2", (255, 230, 0))))
+        if tx.get("vignette"):  # 四隅を暗く(映像の上に重ねる)
+            v = Image.new("L", (W, 1180), 0)
+            yy, xx = np.mgrid[0:1180, 0:W]
+            r = np.sqrt(((xx - W / 2) / (W / 2)) ** 2 + ((yy - 590) / 590) ** 2)
+            v = Image.fromarray((np.clip((r - 0.55) / 0.6, 0, 1) * 200).astype(np.uint8))
+            dark = Image.new("RGBA", (W, 1180), (0, 0, 0, 255)); dark.putalpha(v)
+            img.alpha_composite(dark, (0, 240))
+        sl = [slot(b["t"], 0, 240, W, 1180, {}, blur=True, dim=0.5), slot(b["t"], 0, vy, W, vh, {})]
+    if tx.get("flash") and t is not None and t < 0.2:  # 冒頭の白フラッシュ(30%→0)
+        a = int(255 * 0.3 * (1 - t / 0.2))
+        img.alpha_composite(Image.new("RGBA", (W, H), (255, 255, 255, a)))
+    return img, sl
+
+
+LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2, "C": layer_C}
 
 
 def still(src, key, b, t=None):
     """絵コンテ用: 枠に元動画の1コマを貼り、上に絵を重ねる。t: 区切りの頭からの秒(答えが出る前後を描き分ける)"""
-    over, slots = LAYER[key](b, t) if key == "D2" else LAYER[key](b)
+    over, slots = LAYER[key](b, t) if key in ("D2", "C") else LAYER[key](b)
     img = Image.new("RGB", (W, H), (0, 0, 0))
     for s in slots:
         im = frame(src, s["t"])
@@ -449,7 +513,7 @@ def render(p, v, src, out):
             if b["texts"].get("pop_at") is not None:
                 sfx.append((b["texts"]["pop_at"], b["texts"].get("pop_se", "register")))  # 答えが出る瞬間の音
             anim = (bool(b["texts"].get("buy_pop")) or b["texts"].get("total_pop") is not None
-                    or b["texts"].get("pop_at") is not None) and v["key"] == "D2"
+                    or b["texts"].get("pop_at") is not None or b["texts"].get("flash")) and v["key"] in ("D2", "C")
             if anim:  # 時刻ごとに描いた連番(ボタンが跳ねる)
                 for fi in range(n):
                     LAYER[v["key"]](b, fi / 30)[0].save(os.path.join(td, f"o{i:02d}_{fi:04d}.png"))

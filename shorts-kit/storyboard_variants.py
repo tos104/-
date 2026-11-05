@@ -354,12 +354,49 @@ def layer_C(b, t=None):
     return img, sl
 
 
-LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2, "C": layer_C}
+# ---- CHAT: チャット風(design5b 案9)。上に元動画、下に本人の言葉をトークの吹き出しで積む ----
+def layer_CHAT(b, t=None):
+    tx = b["texts"]
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
+    vh = W * 9 // 16
+    VY = 170
+    if tx.get("head"):
+        ctext(d, (W / 2, 90), tx["head"], font("black", 52), (255, 255, 255), 6)
+    tt = 1e9 if t is None else t
+    shown = [m for m in tx.get("chat", []) if m[2] <= tt][-5:]
+    y = 1500  # 下から上へ積む(新しいものが下)
+    for who, s_, at in reversed(shown):
+        k = 1.0 if at < 0 or t is None else min(1.0, (tt - at) / 0.25)
+        big = who == "big"
+        kind, size = ("dela", 96) if big else ("black", 54)
+        while size > 30 and d.textlength(s_, font=font(kind, size)) > 780:  # 吹き出しが画面からはみ出さない
+            size -= 2
+        f = font(kind, int(size * (0.6 + 0.4 * k)))
+        tw = d.textlength(s_, font=f); h = int(size * 1.9)
+        y -= h
+        if who == "me":  # 本人(右・緑)
+            x1 = 930; d.rounded_rectangle((x1 - tw - 64, y, x1, y + h - 14), radius=40, fill=(120, 225, 120)); d.text((x1 - 32, y + (h - 14) / 2), s_, font=f, fill=(0, 0, 0), anchor="rm")
+        elif who == "big":  # 結果(中央・黄)
+            d.rounded_rectangle((W / 2 - tw / 2 - 50, y, W / 2 + tw / 2 + 50, y + h - 14), radius=50, fill=(255, 230, 0), outline=(0, 0, 0), width=8); d.text((W / 2, y + (h - 14) / 2), s_, font=f, fill=(200, 30, 40), anchor="mm")
+        else:  # 問い(左・白)
+            x0 = 70; d.rounded_rectangle((x0, y, x0 + tw + 64, y + h - 14), radius=40, fill=(255, 255, 255)); d.text((x0 + 32, y + (h - 14) / 2), s_, font=f, fill=(0, 0, 0), anchor="lm")
+        y -= 22
+    if tx.get("cta"):
+        a, pill = tx["cta"]
+        ctext(d, (W / 2, 1585), a, font("xb", 40), (255, 255, 255), 5)
+        f = font("black", 50); tw = d.textlength(pill + " ▼", font=f)
+        d.rounded_rectangle((W / 2 - tw / 2 - 36, 1620, W / 2 + tw / 2 + 36, 1700), radius=22, fill=(240, 192, 120))
+        ctext(d, (W / 2, 1660), pill + " ▼", f, (32, 96, 64))
+    d.rectangle((0, VY - 6, W, VY), fill=(255, 255, 255)); d.rectangle((0, VY + vh, W, VY + vh + 6), fill=(255, 255, 255))
+    return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.6), slot(b["t"], 0, VY, W, vh, {"cx": 320, "cy": 180, "zoom": 1.0}, slide=True)]
+
+
+LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2, "C": layer_C, "CHAT": layer_CHAT}
 
 
 def still(src, key, b, t=None):
     """絵コンテ用: 枠に元動画の1コマを貼り、上に絵を重ねる。t: 区切りの頭からの秒(答えが出る前後を描き分ける)"""
-    over, slots = LAYER[key](b, t) if key in ("D2", "C") else LAYER[key](b)
+    over, slots = LAYER[key](b, t) if key in ("D2", "C", "CHAT") else LAYER[key](b)
     img = Image.new("RGB", (W, H), (0, 0, 0))
     for s in slots:
         im = frame(src, s["t"])
@@ -513,7 +550,7 @@ def render(p, v, src, out):
             if b["texts"].get("pop_at") is not None:
                 sfx.append((b["texts"]["pop_at"], b["texts"].get("pop_se", "register")))  # 答えが出る瞬間の音
             anim = (bool(b["texts"].get("buy_pop")) or b["texts"].get("total_pop") is not None
-                    or b["texts"].get("pop_at") is not None or b["texts"].get("flash")) and v["key"] in ("D2", "C")
+                    or b["texts"].get("pop_at") is not None or b["texts"].get("flash") or b["texts"].get("chat")) and v["key"] in ("D2", "C", "CHAT")
             if anim:  # 時刻ごとに描いた連番(ボタンが跳ねる)
                 for fi in range(n):
                     LAYER[v["key"]](b, fi / 30)[0].save(os.path.join(td, f"o{i:02d}_{fi:04d}.png"))

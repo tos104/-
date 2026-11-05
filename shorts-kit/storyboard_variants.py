@@ -19,7 +19,8 @@ from make_short import to_sec
 HERE = os.path.dirname(os.path.abspath(__file__))
 F = {k: os.path.join(HERE, "fonts", v) for k, v in {
     "dela": "DelaGothicOne-Regular.ttf", "black": "MPLUSRounded1c-Black.ttf",
-    "xb": "MPLUSRounded1c-ExtraBold.ttf", "bold": "MPLUSRounded1c-Bold.ttf"}.items()}
+    "xb": "MPLUSRounded1c-ExtraBold.ttf", "bold": "MPLUSRounded1c-Bold.ttf",
+    "min": "ShipporiMincho-ExtraBold.ttf", "minm": "ShipporiMincho-Medium.ttf"}.items()}
 W, H = 1080, 1920
 SR = rs.SR
 _cache = {}
@@ -391,12 +392,93 @@ def layer_CHAT(b, t=None):
     return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.6), slot(b["t"], 0, VY, W, vh, {"cx": 320, "cy": 180, "zoom": 1.0}, slide=True)]
 
 
-LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2, "C": layer_C, "CHAT": layer_CHAT}
+# ---- TL: 時系列(design5d 案16)。上に元動画、下に縦の線で「2年前→提出→返却→結果」、今の段が光る ----
+TL_STEPS = [("2年前", "2,000円で購入"), ("提出", "PSA鑑定へ"), ("返却", "ラベルは…"), ("結果", "？")]
+
+
+def layer_TL(b, t=None):
+    tx = b["texts"]
+    pa = tx.get("pop_at"); big = 1.0
+    if pa is not None and t is not None:
+        if t < pa:
+            tx = {**tx, **tx.get("before", {})}
+        else:
+            k = min(1.0, (t - pa) / 0.35); big = 1 + 0.6 * (1 - k) ** 3
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
+    vh = W * 9 // 16; VY = 200
+    if tx.get("head"):
+        f = font("dela", 80)
+        while d.textlength(tx["head"], font=f) > W - 80: f = font("dela", f.size - 4)
+        ctext(d, (W / 2, 105), tx["head"], f, (255, 230, 0), 8)
+    d.rectangle((0, VY - 6, W, VY), fill=(255, 255, 255)); d.rectangle((0, VY + vh, W, VY + vh + 6), fill=(255, 255, 255))
+    step = tx["step"]; x = 150; y0 = 900
+    d.line((x, y0, x, y0 + 3 * 170), fill=(200, 200, 200), width=10)
+    d.line((x, y0, x, y0 + min(step, 3) * 170), fill=(255, 42, 42), width=10)
+    for i, (a, v) in enumerate(TL_STEPS):
+        y = y0 + i * 170; on = i <= step
+        if i == 3: v = tx.get("result", v)
+        d.ellipse((x - 38, y - 38, x + 38, y + 38), fill=(255, 42, 42) if i == step else ((255, 255, 255) if on else (90, 90, 90)))
+        d.text((x + 80, y - 34), a, font=font("black", 42), fill=(255, 255, 255) if on else (130, 130, 130), anchor="lm")
+        size = int((76 if i == step else 54) * (big if i == 3 and i == step else 1))
+        f = font("dela", size)
+        while d.textlength(v, font=f) > 760: f = font("dela", f.size - 4)
+        ctext(d, (x + 80, y + 36), v, f, (255, 230, 0) if i == step else ((255, 255, 255) if on else (130, 130, 130)), 7, anchor="lm")
+    if tx.get("cta"):
+        a, pill = tx["cta"]
+        ctext(d, (W / 2, 1585), a, font("xb", 40), (255, 255, 255), 5)
+        f = font("black", 50); tw = d.textlength(pill + " ▼", font=f)
+        d.rounded_rectangle((W / 2 - tw / 2 - 36, 1620, W / 2 + tw / 2 + 36, 1700), radius=22, fill=(240, 192, 120))
+        ctext(d, (W / 2, 1660), pill + " ▼", f, (32, 96, 64))
+    return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.6), slot(b["t"], 0, VY, W, vh, {"cx": 320, "cy": 180, "zoom": 1.0}, slide=True)]
+
+
+# ---- NEWS: 新聞の見出し風(design5d 案17)。明朝の大見出し+白黒写真+紙の質感 ----
+def layer_NEWS(b, t=None):
+    tx = b["texts"]
+    pa = tx.get("pop_at"); big = 1.0
+    if pa is not None and t is not None:
+        if t < pa:
+            tx = {**tx, **tx.get("before", {})}
+        else:
+            k = min(1.0, (t - pa) / 0.35); big = 1 + 0.25 * (1 - k) ** 3
+    img = Image.new("RGBA", (W, H), (238, 232, 218, 255)); d = ImageDraw.Draw(img)
+    rng = np.random.default_rng(3)  # 紙の質感(固定の点)
+    for _ in range(2500):
+        x, y = rng.integers(0, W), rng.integers(0, H); d.point((int(x), int(y)), fill=(220, 212, 195, 255))
+    d.line((60, 120, 1020, 120), fill=(20, 20, 20), width=6); d.line((60, 136, 1020, 136), fill=(20, 20, 20), width=2)
+    d.text((60, 170), "トレカ鑑定　第48号", font=font("minm", 40), fill=(60, 60, 60))
+    hl = tx["hl"]; f = font("min", int(140 * big))
+    while d.textlength(hl, font=f) > 960: f = font("min", f.size - 6)
+    d.text((W / 2, 350), hl, font=f, fill=(20, 20, 20), anchor="mm")
+    sub = tx.get("sub", "")
+    if sub:
+        f = font("min", 54)
+        while d.textlength(sub, font=f) > 940: f = font("min", f.size - 4)
+        d.text((W / 2, 490), sub, font=f, fill=(150, 20, 20), anchor="mm")
+    pw = W - 120; ph = pw * 9 // 16; PY = 580
+    hole(img, (60, PY, 60 + pw, PY + ph))
+    d.rectangle((56, PY - 4, 64 + pw, PY + ph + 4), outline=(20, 20, 20), width=4)
+    d.text((60, PY + ph + 30), "▲ " + tx.get("cap", "2年前に2,000円で買った拡張シートのミュウツー"), font=font("minm", 36), fill=(60, 60, 60))
+    d.line((60, PY + ph + 100, 1020, PY + ph + 100), fill=(20, 20, 20), width=2)
+    if tx.get("body"):
+        f = font("minm", 44); y = PY + ph + 120
+        for ln in tx["body"]:
+            d.text((60, y), ln, font=f, fill=(30, 30, 30)); y += 58
+    if tx.get("cta"):
+        a, pill = tx["cta"]
+        d.text((W / 2, 1575), a, font=font("min", 44), fill=(20, 20, 20), anchor="mm")
+        f = font("min", 54); tw = d.textlength(pill + " ▼", font=f)
+        d.rectangle((W / 2 - tw / 2 - 30, 1610, W / 2 + tw / 2 + 30, 1700), fill=(150, 20, 20))
+        d.text((W / 2, 1655), pill + " ▼", font=f, fill=(255, 255, 255), anchor="mm")
+    return img, [slot(b["t"], 60, PY, pw, ph, {"cx": 320, "cy": 180, "zoom": 1.0}, gray=True)]
+
+
+LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2, "C": layer_C, "CHAT": layer_CHAT, "TL": layer_TL, "NEWS": layer_NEWS}
 
 
 def still(src, key, b, t=None):
     """絵コンテ用: 枠に元動画の1コマを貼り、上に絵を重ねる。t: 区切りの頭からの秒(答えが出る前後を描き分ける)"""
-    over, slots = LAYER[key](b, t) if key in ("D2", "C", "CHAT") else LAYER[key](b)
+    over, slots = LAYER[key](b, t) if key in ("D2", "C", "CHAT", "TL", "NEWS") else LAYER[key](b)
     img = Image.new("RGB", (W, H), (0, 0, 0))
     for s in slots:
         im = frame(src, s["t"])
@@ -550,7 +632,7 @@ def render(p, v, src, out):
             if b["texts"].get("pop_at") is not None:
                 sfx.append((b["texts"]["pop_at"], b["texts"].get("pop_se", "register")))  # 答えが出る瞬間の音
             anim = (bool(b["texts"].get("buy_pop")) or b["texts"].get("total_pop") is not None
-                    or b["texts"].get("pop_at") is not None or b["texts"].get("flash") or b["texts"].get("chat")) and v["key"] in ("D2", "C", "CHAT")
+                    or b["texts"].get("pop_at") is not None or b["texts"].get("flash") or b["texts"].get("chat")) and v["key"] in ("D2", "C", "CHAT", "TL", "NEWS")
             if anim:  # 時刻ごとに描いた連番(ボタンが跳ねる)
                 for fi in range(n):
                     LAYER[v["key"]](b, fi / 30)[0].save(os.path.join(td, f"o{i:02d}_{fi:04d}.png"))
@@ -569,6 +651,8 @@ def render(p, v, src, out):
                 f = f"[{k}:v]crop={cw}:{ch}:{x}:{y},scale={s['w']}:{s['h']}:flags=lanczos,setsar=1,fps=30"
                 if s.get("blur"):
                     f += ",boxblur=24:2"
+                if s.get("gray"):  # 白黒(新聞風)
+                    f += ",hue=s=0"
                 if s.get("dim"):
                     f += f",eq=brightness={-s['dim'] * 0.5:.2f}"
                 fc.append(f + f",setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration={dur + 1:.2f}[s{k}]")

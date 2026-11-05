@@ -854,11 +854,134 @@ def board(sc, root, out):
     sheet.save(out)
 
 
+# ---------- 音(合成・外部素材なし・権利フリー) ----------
+
+SR = 48000
+
+
+def _env(n, attack, decay):
+    u = np.arange(n) / SR
+    return np.minimum(1, u / attack) * np.exp(-u * decay)
+
+
+def _soft_lp(x, k):
+    """短い移動平均で高い音を丸める(k サンプル)。"""
+    return np.convolve(x, np.ones(k) / k, mode="same")
+
+
+def lounge(dur, bpm=92, seed=5):
+    """ダイニングバーの夜に合う BGM。ii-V-I のジャズ進行(Dm9→G13→Cmaj9→A7b9)を
+    エレピ・ウッドベース・ブラシのドラム・薄いパッドで鳴らす。8 分音符は少し跳ねさせる。ステレオで返す。"""
+    r = np.random.default_rng(seed)
+    n = int(dur * SR)
+    L, R = np.zeros(n), np.zeros(n)
+    beat = 60 / bpm
+    bar = beat * 4
+    hz = lambda m: 440 * 2 ** ((m - 69) / 12)
+    chords = [[53, 57, 60, 64], [53, 57, 59, 64], [52, 55, 59, 62], [55, 58, 61, 64]]
+    roots = [38, 43, 36, 45]
+    swing = beat * 0.62  # 跳ねる裏拍
+
+    def add(buf, at, x, gain):
+        i = int(at * SR)
+        if i >= n:
+            return
+        x = x[: n - i]
+        buf[i:i + len(x)] += x * gain
+
+    def ep(m, length):  # エレピ: FM で鐘っぽいアタック + 丸い胴鳴り + 小さなトレモロ
+        k = int(length * SR)
+        u = np.arange(k) / SR
+        f = hz(m)
+        idx = 1.6 * np.exp(-u * 4)
+        x = np.sin(2 * np.pi * f * u + idx * np.sin(2 * np.pi * f * u)) * (1 + 0.08 * np.sin(2 * np.pi * 4.5 * u))
+        return x * _env(k, 0.004, 1.6)
+
+    for b in range(int(np.ceil(dur / bar)) + 1):
+        t0 = b * bar
+        ch, root = chords[b % 4], roots[b % 4]
+        for m in ch:  # 1 拍目で長く、2 拍目の裏で短く
+            add(L, t0, ep(m, bar), 0.07); add(R, t0 + 0.012, ep(m, bar), 0.06)
+            add(L, t0 + beat + swing, ep(m + 12, 0.5), 0.025); add(R, t0 + beat + swing, ep(m + 12, 0.5), 0.035)
+        k = int((bar + 0.4) * SR)  # パッド(ゆっくり膨らむ)
+        u = np.arange(k) / SR
+        pad = sum(np.sin(2 * np.pi * hz(m) * u + 0.5 * np.sin(2 * np.pi * 0.3 * u)) for m in ch)
+        penv = np.minimum(1, u / 0.9) * np.exp(-np.maximum(0, u - bar) * 6)
+        add(L, t0, pad * penv, 0.018); add(R, t0 + 0.02, pad * penv, 0.018)
+        walk = [root, root + 7, root + 12, roots[(b + 1) % 4] + (1 if roots[(b + 1) % 4] < root else -1)]
+        for q, m in enumerate(walk):  # ウッドベース(4 分で歩く)
+            k = int(beat * SR)
+            u = np.arange(k) / SR
+            x = (np.sin(2 * np.pi * hz(m) * u) + 0.35 * np.sin(4 * np.pi * hz(m) * u)) * _env(k, 0.006, 3.2)
+            add(L, t0 + q * beat, x, 0.2); add(R, t0 + q * beat, x, 0.2)
+        for q in range(4):  # ブラシのドラム
+            tq = t0 + q * beat
+            if q in (0, 2):
+                k = int(0.25 * SR); u = np.arange(k) / SR
+                kick = np.sin(2 * np.pi * (48 + 55 * np.exp(-u * 35)) * u) * np.exp(-u * 16)
+                add(L, tq, kick, 0.22); add(R, tq, kick, 0.22)
+            if q in (1, 3):
+                k = int(0.22 * SR)
+                sn = _soft_lp(r.standard_normal(k), 6) * _env(k, 0.01, 18)
+                add(L, tq, sn, 0.05); add(R, tq, sn, 0.06)
+            for at in (tq, tq + swing):
+                k = int(0.05 * SR)
+                hat = np.diff(r.standard_normal(k + 1)) * _env(k, 0.001, 70)
+                add(R, at, hat, 0.012 if at == tq else 0.018); add(L, at, hat, 0.006)
+    k = int(0.6 * SR)  # 残響を少しだけ(同じ乱数で毎回同じ)
+    ir = r.standard_normal(k) * np.exp(-np.arange(k) / SR * 9)
+    ir = _soft_lp(ir, 8); ir /= np.sqrt(np.sum(ir ** 2))
+    L = L + 0.25 * np.convolve(L, ir)[:n] * 0.35
+    R = R + 0.25 * np.convolve(R, ir[::-1])[:n] * 0.35
+    t = np.arange(n) / SR
+    fade = np.clip(np.minimum(t / 0.15, (dur - t) / 1.2), 0, 1)  # 頭はすぐ鳴らし、終わりはゆっくり消す
+    crackle = (r.random(n) > 0.9997) * r.standard_normal(n) * 0.04  # レコードの小さなノイズ
+    return np.stack([(L + crackle) * fade, (R + crackle) * fade])
+
+
+def soundtrack(sc, total):
+    """BGM に、カットの切り替えと演出の山場に合わせた効果音を重ねる。"""
+    import se
+    mix = lounge(total + 0.2, sc.get("bpm", 92)) * 0.8
+    sfx = []
+    s = 0.0
+    for sh in sc["shots"]:
+        tr, fx = sh.get("trans"), sh["fx"]
+        if tr in ("whip", "slide", "rise"):
+            sfx.append((s - 0.06, "whoosh2", 0.45))
+        elif tr == "punch":
+            sfx.append((s, "tap", 0.35))
+        elif tr == "flash":
+            sfx.append((s, "kira", 0.3))
+        if fx == "stamp":
+            sfx.append((s + 0.42, "impact2", 0.55))
+        elif fx == "cards":
+            sfx += [(s + 0.45 + i * 0.75, "tap", 0.4) for i in range(3)] + [(s + 0.1, "register", 0.35)]
+        elif fx == "menu":
+            sfx += [(s + 0.3 + i * 0.3, "tap", 0.3) for i in range(len(sh["rows"]))]
+        elif fx == "dish":
+            sfx.append((s + 0.1, "swish", 0.25))
+        elif fx == "sparkle":
+            sfx.append((s + 0.2, "kira", 0.3))
+        elif fx == "cta":
+            sfx.append((s + 0.45, "swish", 0.3))
+        elif fx == "count":
+            sfx.append((s + 0.1, "tape", 0.18))
+        s += round(sh["dur"] * FPS) / FPS
+    for at, name, gain in sfx:
+        x = se.get(name)
+        i = max(0, int(at * SR))
+        x = x[: mix.shape[1] - i]
+        mix[:, i:i + len(x)] += x * gain
+    return mix[:, : int(total * SR)]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("script")
     ap.add_argument("--out")
     ap.add_argument("--board")
+    ap.add_argument("--audio", action="store_true", help="BGM と効果音を入れる(既定は無音)")
     a = ap.parse_args()
     sc = json.load(open(a.script, encoding="utf-8"))
     root = os.path.join(os.path.dirname(os.path.abspath(a.script)), sc["assets"])
@@ -876,7 +999,20 @@ def main():
             n += 1
         enc.stdin.close()
         enc.wait()
-        print(f"{a.out} ({n / FPS:.1f}s, {len(sc['shots'])} shots, 無音)")
+        if a.audio:
+            import tempfile, wave
+            mix = soundtrack(sc, n / FPS)
+            mix = mix / max(1e-6, np.max(np.abs(mix)) / 0.9)
+            with tempfile.TemporaryDirectory() as td:
+                wav, silent = os.path.join(td, "mix.wav"), os.path.join(td, "v.mp4")
+                with wave.open(wav, "wb") as w:
+                    w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
+                    w.writeframes((np.clip(mix.T, -1, 1) * 32767).astype(np.int16).tobytes())
+                os.replace(a.out, silent)
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", silent, "-i", wav, "-map", "0:v", "-map", "1:a",
+                                "-c:v", "copy", "-af", "loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.7:level=false", "-c:a", "aac", "-b:a", "192k",
+                                "-ar", str(SR), "-shortest", "-movflags", "+faststart", a.out], check=True)
+        print(f"{a.out} ({n / FPS:.1f}s, {len(sc['shots'])} shots, {'BGM・効果音あり' if a.audio else '無音'})")
 
 
 if __name__ == "__main__":

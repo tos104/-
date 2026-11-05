@@ -730,6 +730,9 @@ def draw_pattern(im, name, t, dur):
 
 
 def draw_diagram(im, name, t, dur):
+    import fx_diagrams                # FX の図解(スプレッドなど)。帯の上端から描く
+    if name in fx_diagrams.NAMES:
+        return fx_diagrams.draw(im, name, t, dur, PANEL_Y, lambda s: font(F_HEAD, s), INK)
     if name in PATTERNS:
         return draw_pattern(im, name, t, dur)
     if name == "sketch":

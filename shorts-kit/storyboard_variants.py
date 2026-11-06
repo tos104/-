@@ -578,12 +578,12 @@ def layer_QUIZ(b, t=None):
     return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.6), slot(b["t"], 0, VY, W, vh, {"cx": 320, "cy": 180, "zoom": 1.0}, slide=True)]
 
 
-LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2, "C": layer_C, "CHAT": layer_CHAT, "TL": layer_TL, "NEWS": layer_NEWS, "THUMB": layer_THUMB, "QUIZ": layer_QUIZ, "SERIES": layer_QUIZ}
+LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2, "C": layer_C, "CHAT": layer_CHAT, "TL": layer_TL, "NEWS": layer_NEWS, "THUMB": layer_THUMB, "QUIZ": layer_QUIZ, "SERIES": layer_QUIZ, "TL25": layer_TL}
 
 
 def still(src, key, b, t=None):
     """絵コンテ用: 枠に元動画の1コマを貼り、上に絵を重ねる。t: 区切りの頭からの秒(答えが出る前後を描き分ける)"""
-    over, slots = LAYER[key](b, t) if key in ("D2", "C", "CHAT", "TL", "NEWS", "THUMB", "QUIZ", "SERIES") else LAYER[key](b)
+    over, slots = LAYER[key](b, t) if key in ("D2", "C", "CHAT", "TL", "NEWS", "THUMB", "QUIZ", "SERIES", "TL25") else LAYER[key](b)
     img = Image.new("RGB", (W, H), (0, 0, 0))
     for s in slots:
         im = frame(src, s["t"])
@@ -737,7 +737,7 @@ def render(p, v, src, out):
             if b["texts"].get("pop_at") is not None:
                 sfx.append((b["texts"]["pop_at"], b["texts"].get("pop_se", "register")))  # 答えが出る瞬間の音
             anim = (bool(b["texts"].get("buy_pop")) or b["texts"].get("total_pop") is not None
-                    or b["texts"].get("pop_at") is not None or b["texts"].get("flash") or b["texts"].get("chat")) and v["key"] in ("D2", "C", "CHAT", "TL", "NEWS", "THUMB", "QUIZ", "SERIES")
+                    or b["texts"].get("pop_at") is not None or b["texts"].get("flash") or b["texts"].get("chat")) and v["key"] in ("D2", "C", "CHAT", "TL", "NEWS", "THUMB", "QUIZ", "SERIES", "TL25")
             if anim:  # 時刻ごとに描いた連番(ボタンが跳ねる)
                 for fi in range(n):
                     LAYER[v["key"]](b, fi / 30)[0].save(os.path.join(td, f"o{i:02d}_{fi:04d}.png"))

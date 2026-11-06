@@ -152,8 +152,8 @@ def spread_band(im, cx, y, w, gap, fill_k=1.0, q=0.0, label=None, dashed=False):
     d = ImageDraw.Draw(im)
     d.text((x0, y - 14), "買う値段", font=F(40, F_XB), anchor="ld", fill=RED)
     d.text((x0, y + gap + 14), "売る値段", font=F(40, F_XB), anchor="la", fill=BLUE)
-    if q > 0:
-        d.text((cx, y + gap / 2), "？", font=F(int(100 * q)), anchor="mm", fill=INK)
+    if q > 0.05:      # 縮みながら消える(大きさ 0 は描かない)
+        d.text((cx, y + gap / 2), "？", font=F(max(8, int(100 * q))), anchor="mm", fill=INK)
     if label:
         d.text((cx, y + gap / 2), label, font=F(54), anchor="mm", fill=INK)
 

@@ -405,30 +405,30 @@ def layer_TL(b, t=None):
         else:
             k = min(1.0, (t - pa) / 0.35); big = 1 + 0.6 * (1 - k) ** 3
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
-    vh = W * 9 // 16; VY = 200
+    vh = W * 9 // 16; VY = 300
     if tx.get("head"):
-        f = font("dela", 80)
-        while d.textlength(tx["head"], font=f) > W - 80: f = font("dela", f.size - 4)
-        ctext(d, (W / 2, 105), tx["head"], f, (255, 230, 0), 8)
+        f = font("dela", 96)
+        while d.textlength(tx["head"], font=f) > W - 70: f = font("dela", f.size - 4)
+        ctext(d, (W / 2, 175), tx["head"], f, (255, 230, 0), 9)
     d.rectangle((0, VY - 6, W, VY), fill=(255, 255, 255)); d.rectangle((0, VY + vh, W, VY + vh + 6), fill=(255, 255, 255))
-    step = tx["step"]; x = 150; y0 = 900
-    d.line((x, y0, x, y0 + 3 * 170), fill=(200, 200, 200), width=10)
-    d.line((x, y0, x, y0 + min(step, 3) * 170), fill=(255, 42, 42), width=10)
+    step = tx["step"]; x = 150; y0 = 975
+    d.line((x, y0, x, y0 + 3 * 178), fill=(200, 200, 200), width=10)
+    d.line((x, y0, x, y0 + min(step, 3) * 178), fill=(255, 42, 42), width=10)
     for i, (a, v) in enumerate(TL_STEPS):
-        y = y0 + i * 170; on = i <= step
+        y = y0 + i * 178; on = i <= step
         if i == 3: v = tx.get("result", v)
-        d.ellipse((x - 38, y - 38, x + 38, y + 38), fill=(255, 42, 42) if i == step else ((255, 255, 255) if on else (90, 90, 90)))
-        d.text((x + 80, y - 34), a, font=font("black", 42), fill=(255, 255, 255) if on else (130, 130, 130), anchor="lm")
-        size = int((76 if i == step else 54) * (big if i == 3 and i == step else 1))
+        d.ellipse((x - 44, y - 44, x + 44, y + 44), fill=(255, 42, 42) if i == step else ((255, 255, 255) if on else (90, 90, 90)))
+        d.text((x + 85, y - 40), a, font=font("black", 48), fill=(255, 255, 255) if on else (130, 130, 130), anchor="lm")
+        size = int((88 if i == step else 62) * (big if i == 3 and i == step else 1))
         f = font("dela", size)
         while d.textlength(v, font=f) > 760: f = font("dela", f.size - 4)
-        ctext(d, (x + 80, y + 36), v, f, (255, 230, 0) if i == step else ((255, 255, 255) if on else (130, 130, 130)), 7, anchor="lm")
+        ctext(d, (x + 85, y + 40), v, f, (255, 230, 0) if i == step else ((255, 255, 255) if on else (130, 130, 130)), 7, anchor="lm")
     if tx.get("cta"):
         a, pill = tx["cta"]
-        ctext(d, (W / 2, 1585), a, font("xb", 40), (255, 255, 255), 5)
-        f = font("black", 50); tw = d.textlength(pill + " ▼", font=f)
-        d.rounded_rectangle((W / 2 - tw / 2 - 36, 1620, W / 2 + tw / 2 + 36, 1700), radius=22, fill=(240, 192, 120))
-        ctext(d, (W / 2, 1660), pill + " ▼", f, (32, 96, 64))
+        pill = a.replace("の全結果は", "は") + pill  # 1行にまとめて結果の行と重ならないように
+        f = font("black", 52); tw = d.textlength(pill + " ▼", font=f)
+        d.rounded_rectangle((W / 2 - tw / 2 - 36, 1640, W / 2 + tw / 2 + 36, 1715), radius=22, fill=(240, 192, 120))
+        ctext(d, (W / 2, 1677), pill + " ▼", f, (32, 96, 64))
     return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.6), slot(b["t"], 0, VY, W, vh, {"cx": 320, "cy": 180, "zoom": 1.0}, slide=True)]
 
 

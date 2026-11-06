@@ -519,12 +519,52 @@ def layer_THUMB(b, t=None):
     return img, [slot(b["t"], 0, 0, W, H, b, enhance=True, delogo=b.get("delogo", False), slide=True)]
 
 
-LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2, "C": layer_C, "CHAT": layer_CHAT, "TL": layer_TL, "NEWS": layer_NEWS, "THUMB": layer_THUMB}
+# ---- QUIZ: クイズ3択(design5b 案7)+シリーズの題名。上にコピー、中に元動画(拡大なし)、下に3択。答えの瞬間に正解が光る ----
+def layer_QUIZ(b, t=None):
+    tx = b["texts"]
+    pa = tx.get("pop_at"); big = 1.0; shown = tx.get("answer")
+    if pa is not None and t is not None:
+        if t < pa:
+            tx = {**tx, **tx.get("before", {})}; shown = tx.get("answer")
+        else:
+            k = min(1.0, (t - pa) / 0.35); big = 1 + 0.25 * (1 - k) ** 3
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
+    if tx.get("series"):  # シリーズの題名(毎回同じ見た目)
+        f = font("black", 40); tw = d.textlength(tx["series"], font=f)
+        d.rounded_rectangle((W / 2 - tw / 2 - 30, 26, W / 2 + tw / 2 + 30, 92), radius=33, fill=(200, 30, 40))
+        d.text((W / 2, 59), tx["series"], font=f, fill=(255, 255, 255), anchor="mm")
+    l1, l2 = tx.get("copy", ["", ""])
+    if l1:
+        ctext(d, (W / 2, 160), l1, font("xb", 60), (255, 255, 255), 6)
+    f = font("dela", 92)
+    while d.textlength(l2, font=f) > W - 80: f = font("dela", f.size - 4)
+    ctext(d, (W / 2, 255 if l1 else 210), l2, f, (255, 220, 60), 8)
+    vh = W * 9 // 16; VY = 330
+    d.rectangle((0, VY - 6, W, VY), fill=(255, 255, 255)); d.rectangle((0, VY + vh, W, VY + vh + 6), fill=(255, 255, 255))
+    q = tx.get("q", "何点だと思う？")
+    ctext(d, (W / 2, 1010), q, font("dela", 70), (255, 255, 255), 7)
+    for i, opt in enumerate(tx.get("opts", ["PSA 8", "PSA 9", "PSA 10"])):
+        y = 1090 + i * 165; on = shown == opt; off = shown is not None and not on
+        sc = big if on else 1.0; hw, hh = 380 * sc, 70 * sc; cx, cy = W / 2, y + 70
+        d.rounded_rectangle((cx - hw, cy - hh, cx + hw, cy + hh), radius=40, fill=(255, 230, 0) if on else ((70, 70, 70) if off else (255, 255, 255)), outline=(0, 0, 0), width=8)
+        d.text((cx, cy), opt, font=font("dela", int(76 * sc)), fill=(200, 30, 40) if on else ((150, 150, 150) if off else (0, 0, 0)), anchor="mm")
+        if on and tx.get("price"):
+            d.text((cx + hw - 30, cy), tx["price"], font=font("black", int(44 * sc)), fill=(0, 0, 0), anchor="rm")
+    if tx.get("cta"):
+        a, pill = tx["cta"]
+        ctext(d, (W / 2, 1600), a, font("xb", 40), (255, 255, 255), 5)
+        f = font("black", 50); tw = d.textlength(pill + " ▼", font=f)
+        d.rounded_rectangle((W / 2 - tw / 2 - 36, 1630, W / 2 + tw / 2 + 36, 1705), radius=22, fill=(240, 192, 120))
+        ctext(d, (W / 2, 1667), pill + " ▼", f, (32, 96, 64))
+    return img, [slot(b["t"], 0, 0, W, H, b, blur=True, dim=0.6), slot(b["t"], 0, VY, W, vh, {"cx": 320, "cy": 180, "zoom": 1.0}, slide=True)]
+
+
+LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2, "C": layer_C, "CHAT": layer_CHAT, "TL": layer_TL, "NEWS": layer_NEWS, "THUMB": layer_THUMB, "QUIZ": layer_QUIZ}
 
 
 def still(src, key, b, t=None):
     """絵コンテ用: 枠に元動画の1コマを貼り、上に絵を重ねる。t: 区切りの頭からの秒(答えが出る前後を描き分ける)"""
-    over, slots = LAYER[key](b, t) if key in ("D2", "C", "CHAT", "TL", "NEWS", "THUMB") else LAYER[key](b)
+    over, slots = LAYER[key](b, t) if key in ("D2", "C", "CHAT", "TL", "NEWS", "THUMB", "QUIZ") else LAYER[key](b)
     img = Image.new("RGB", (W, H), (0, 0, 0))
     for s in slots:
         im = frame(src, s["t"])
@@ -678,7 +718,7 @@ def render(p, v, src, out):
             if b["texts"].get("pop_at") is not None:
                 sfx.append((b["texts"]["pop_at"], b["texts"].get("pop_se", "register")))  # 答えが出る瞬間の音
             anim = (bool(b["texts"].get("buy_pop")) or b["texts"].get("total_pop") is not None
-                    or b["texts"].get("pop_at") is not None or b["texts"].get("flash") or b["texts"].get("chat")) and v["key"] in ("D2", "C", "CHAT", "TL", "NEWS", "THUMB")
+                    or b["texts"].get("pop_at") is not None or b["texts"].get("flash") or b["texts"].get("chat")) and v["key"] in ("D2", "C", "CHAT", "TL", "NEWS", "THUMB", "QUIZ")
             if anim:  # 時刻ごとに描いた連番(ボタンが跳ねる)
                 for fi in range(n):
                     LAYER[v["key"]](b, fi / 30)[0].save(os.path.join(td, f"o{i:02d}_{fi:04d}.png"))

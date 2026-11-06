@@ -4,7 +4,7 @@
  "caption_y": 290,
  "voice": {"engine": "voicevox", "speaker": 13, "name": "青山龍星(ノーマル)", "credit": "VOICEVOX:青山龍星"},
  "say_speed": 1.2,
- "loudness": {"lufs": -14, "peak_dbtp": -1.5},
+ "loudness": {"lufs": -14, "peak_dbtp": -1.5, "pre": "acompressor=threshold=0.1:ratio=4:attack=5:release=120:makeup=2,alimiter=limit=0.7:level=false"},
  "shots": [
   {"cut": "hook", "dur": 2.4, "note": "【入口・ネガティブ訴求 4.31/冒頭A】含み損が広がるチャート。頭の中「あ、私のことかも」。本人の言葉「我慢しちゃう」(10:44)", "sfx": [["boom", 0.0, 0.55]], "say": [["含み損、我慢してない？", 0.1]]},
   {"cut": "claim", "dur": 3.7, "caption": "損してる人ほど残ると\nFX会社は儲かる", "note": "結論を先に→「え、なんで？」。10:46「損してる人の方が残ってくる」/11:01「儲かってくる」", "sfx": [["pop", 0.2, 0.45], ["chime", 0.9, 0.5]], "say": [["損してる人ほど残ると、FX会社は儲かる。", 0.1]]},

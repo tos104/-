@@ -233,6 +233,10 @@ def main():
         af = []
         if "lufs" in sc.get("loudness", {}):   # 2回で測って合わせる(chart_short.py と同じ。YouTube の目安 -14 LUFS)
             L = sc["loudness"]
+            if L.get("pre"):                    # 先に軽く圧縮・制限(効果音の山で -14 に届かないため。v8 で実測)
+                pre_wav = wav + ".pre.wav"
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav, "-af", L["pre"], pre_wav], check=True)
+                os.replace(pre_wav, wav)
             base = f"loudnorm=I={L['lufs']}:TP={L.get('peak_dbtp', -1.0)}:LRA=11"
             log = subprocess.run(["ffmpeg", "-hide_banner", "-i", wav, "-af", base + ":print_format=json", "-f", "null", "-"],
                                  capture_output=True, text=True).stderr

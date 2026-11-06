@@ -185,7 +185,8 @@ def fx_spread(im, t, cuts, sc=None):
     return im
 
 
-SCENES = {"fx_spread": fx_spread}
+import fx_spread_learn                                # 学びの流れ版(v8)
+SCENES = {"fx_spread": fx_spread, "fx_spread_learn": fx_spread_learn.scene}
 
 
 def frame(sc, t, cuts):

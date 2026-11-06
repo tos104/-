@@ -473,12 +473,58 @@ def layer_NEWS(b, t=None):
     return img, [slot(b["t"], 60, PY, pw, ph, {"cx": 320, "cy": 180, "zoom": 1.0}, gray=True)]
 
 
-LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2, "C": layer_C, "CHAT": layer_CHAT, "TL": layer_TL, "NEWS": layer_NEWS}
+# ---- THUMB: サムネ連動(briefs/thumbsync_mewtwo.md)。全面のカード+集中線+上に白・下に黄の極太文字 ----
+def speed_lines(img, strength=1.0, seed=1, n=90, inner=0.42):
+    import random
+    r = random.Random(seed); d = ImageDraw.Draw(img); cx, cy, R = W / 2, H * 0.47, 1500
+    for i in range(n):
+        a = 2 * math.pi * i / n + r.uniform(-0.02, 0.02); w = r.uniform(0.006, 0.02) * strength
+        rin = R * (inner + r.uniform(0, 0.15))
+        d.polygon([(cx + R * math.cos(a - w), cy + R * math.sin(a - w)), (cx + R * math.cos(a + w), cy + R * math.sin(a + w)),
+                   (cx + rin * math.cos(a), cy + rin * math.sin(a))], fill=(0, 0, 0, 255))
+
+
+def thick(d, xy, s, size, fill, maxw=1000, stroke=14):
+    while size > 40 and d.textlength(s, font=font("dela", size)) > maxw:
+        size -= 4
+    x, y = xy
+    d.text((x + 6, y + 10), s, font=font("dela", size), fill=(0, 0, 0), anchor="mm", stroke_width=stroke, stroke_fill=(0, 0, 0))
+    d.text((x, y), s, font=font("dela", size), fill=fill, anchor="mm", stroke_width=stroke, stroke_fill=(0, 0, 0))
+
+
+def layer_THUMB(b, t=None):
+    tx = b["texts"]
+    pa = tx.get("pop_at"); big = 1.0; after = 9.0
+    if pa is not None and t is not None:
+        if t < pa:
+            tx = {**tx, **tx.get("before", {})}
+        else:
+            after = t - pa; k = min(1.0, after / 0.35); big = 1 + 0.5 * (1 - k) ** 3 + 0.12 * math.sin(math.pi * k) * (1 - k)
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(img)
+    if tx.get("lines", 0):
+        speed_lines(img, tx["lines"], seed=b.get("seed", 1))
+    if tx.get("l1"):
+        thick(d, (W / 2, 560), tx["l1"], 120, (255, 255, 255))
+    y = tx.get("y2", 1330)
+    for s_ in tx.get("l2", []):
+        thick(d, (W / 2, y), s_, int(190 * big), tuple(tx.get("c2", (255, 230, 0))), maxw=1000 * big); y += 200
+    if tx.get("cta"):
+        d.rounded_rectangle((W / 2 - 340, 1560, W / 2 + 340, 1660), radius=24, fill=(240, 192, 120), outline=(0, 0, 0), width=6)
+        d.text((W / 2, 1610), tx["cta"], font=font("black", 56), fill=(32, 96, 64), anchor="mm")
+    fl = None
+    if tx.get("flash") and t is not None and t < 0.2: fl = t
+    if pa is not None and t is not None and 0 <= after < 0.2 and tx.get("pop_flash"): fl = after
+    if fl is not None:
+        img.alpha_composite(Image.new("RGBA", (W, H), (255, 255, 255, int(255 * 0.5 * (1 - fl / 0.2)))))
+    return img, [slot(b["t"], 0, 0, W, H, b, enhance=True, delogo=b.get("delogo", False), slide=True)]
+
+
+LAYER = {"A": layer_A, "B": layer_B, "C": layer_C, "D": layer_D, "E": layer_E, "D2": layer_D2, "C": layer_C, "CHAT": layer_CHAT, "TL": layer_TL, "NEWS": layer_NEWS, "THUMB": layer_THUMB}
 
 
 def still(src, key, b, t=None):
     """絵コンテ用: 枠に元動画の1コマを貼り、上に絵を重ねる。t: 区切りの頭からの秒(答えが出る前後を描き分ける)"""
-    over, slots = LAYER[key](b, t) if key in ("D2", "C", "CHAT", "TL", "NEWS") else LAYER[key](b)
+    over, slots = LAYER[key](b, t) if key in ("D2", "C", "CHAT", "TL", "NEWS", "THUMB") else LAYER[key](b)
     img = Image.new("RGB", (W, H), (0, 0, 0))
     for s in slots:
         im = frame(src, s["t"])
@@ -632,7 +678,7 @@ def render(p, v, src, out):
             if b["texts"].get("pop_at") is not None:
                 sfx.append((b["texts"]["pop_at"], b["texts"].get("pop_se", "register")))  # 答えが出る瞬間の音
             anim = (bool(b["texts"].get("buy_pop")) or b["texts"].get("total_pop") is not None
-                    or b["texts"].get("pop_at") is not None or b["texts"].get("flash") or b["texts"].get("chat")) and v["key"] in ("D2", "C", "CHAT", "TL", "NEWS")
+                    or b["texts"].get("pop_at") is not None or b["texts"].get("flash") or b["texts"].get("chat")) and v["key"] in ("D2", "C", "CHAT", "TL", "NEWS", "THUMB")
             if anim:  # 時刻ごとに描いた連番(ボタンが跳ねる)
                 for fi in range(n):
                     LAYER[v["key"]](b, fi / 30)[0].save(os.path.join(td, f"o{i:02d}_{fi:04d}.png"))
@@ -648,7 +694,12 @@ def render(p, v, src, out):
                 vlen = min(dur + 0.5, b.get("v_max", 1e9))  # v_max: 元動画の字幕が出る前で映像だけ止める(声は続ける)
                 args += ["-ss", f"{s['t']:.3f}", "-t", f"{vlen:.3f}", "-i", src]
                 x, y, cw, ch = crop_box(src_w, src_h, s["w"], s["h"], s["cx"], s["cy"], s["zoom"])
-                f = f"[{k}:v]crop={cw}:{ch}:{x}:{y},scale={s['w']}:{s['h']}:flags=lanczos,setsar=1,fps=30"
+                pre = "delogo=x=1:y=1:w=205:h=68," if s.get("delogo") else ""  # 元動画の左上のロゴを周りの色で埋める
+                if s.get("enhance"):  # 拡大しても荒れにくく: ノイズを抑えてから段階的に拡大し、輪郭を少し立てる(AI で描き足さない)
+                    f = (f"[{k}:v]{pre}hqdn3d=3:3:4:4,crop={cw}:{ch}:{x}:{y},scale={cw * 2}:{ch * 2}:flags=lanczos,"
+                         f"scale={s['w']}:{s['h']}:flags=lanczos,unsharp=5:5:0.9:5:5:0.0,eq=contrast=1.06:saturation=1.12,setsar=1,fps=30")
+                else:
+                    f = f"[{k}:v]{pre}crop={cw}:{ch}:{x}:{y},scale={s['w']}:{s['h']}:flags=lanczos,setsar=1,fps=30"
                 if s.get("blur"):
                     f += ",boxblur=24:2"
                 if s.get("gray"):  # 白黒(新聞風)

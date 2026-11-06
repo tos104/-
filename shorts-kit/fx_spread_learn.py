@@ -84,45 +84,61 @@ def mini_band(im, cx, gap, col, label, k=1.0, dim=0.0):
     ImageDraw.Draw(im).text((cx, SHELF_Y + 30), label, font=F(54), anchor="ma", fill=c)
 
 
-HEADERS = [None, "FX会社の稼ぎ方", "① スプレッド", "① スプレッド", "② カバー", "② カバー", "② カバー",
-           "③ 残る", "③ 残る", "なぜ狭い方がいい？", "なぜ狭い方がいい？", "まとめ", None]
+# カットの名前 → 小見出し。台本の各カットに "cut" で名前を書く(並べ替え・削除しても番号がずれない)
+HEADERS = {"hook": None, "claim": "FX会社の稼ぎ方", "spread": "① スプレッド", "share": "① スプレッド",
+           "you_buy": "② カバー", "cover": "② カバー", "only_spread": "② カバー", "stay": "③ 残る",
+           "profit": "③ 残る", "old_new": "なぜ狭い方がいい？", "pairs": "なぜ狭い方がいい？", "summary": "まとめ",
+           "end": None}
+CAP_TOP = 300          # 字幕の箱を上に(ユーザー指定 2026-11-06)。舞台はその分下げる
+DY = 170
 
 
 def scene(im, t, cuts, sc=None):
+    shots = (sc or {})["shots"]
     i = max(j for j, c0 in enumerate(cuts) if t >= c0)
     u = t - cuts[i]
-    # 小見出し(カットが替わる時だけ溶かす)
-    h = HEADERS[i] if i < len(HEADERS) else None
+    name = shots[i]["cut"]
+    prev = shots[i - 1]["cut"] if i else None
+    im = _stage(im, name, prev, u)
+    if name != "end":                # 字幕を上に置くため、舞台を下げる
+        sh = background()
+        sh.paste(im.crop((0, 0, W, H - DY)), (0, DY))
+        im = sh
+    h = HEADERS.get(name)
     if h:
-        same = i > 0 and HEADERS[i - 1] == h
-        im = fade(im, lambda x: header(x, h), 1.0 if same else k_(u, 0, 0.25))
-
-    if i == 0:      # 入口: 含み損、我慢してない？(最初から含み損が見えていて、2秒かけて広がる)
+        same = prev and HEADERS.get(prev) == h
+        im = fade(im, lambda x: header(x, h, y=200), 1.0 if same else k_(u, 0, 0.25))
+    if name == "hook":
         title(im, "{含み損}、\n我慢してない？", y=170, size=96)
+    return im
+
+
+def _stage(im, name, prev, u):
+    if name == "hook":      # 入口: 含み損、我慢してない？(最初から含み損が見えていて、2秒かけて広がる)
         loss_chart(im, 0.62 + 0.38 * ease(u / 2.2))
         you(im, 200, 1300)
         return im
 
     # 舞台(棚と会社)。3 カット目(スプレッドの定義)と 11 カット目以降は会社を消す
-    show_bldg = i in (1, 3, 4, 5, 6, 7, 8, 9)
+    show_bldg = name in ("claim", "share", "you_buy", "cover", "only_spread", "stay", "profit", "old_new")
     a = 1.0
-    if show_bldg and i in (1, 3):
+    if show_bldg and name in ("claim", "share"):
         a = k_(u, 0, 0.3)
-    if not show_bldg and i in (2, 10) and u < 0.3:
+    if not show_bldg and name in ("spread", "pairs") and u < 0.3:
         a = 1 - k_(u, 0, 0.3)
         show_bldg = True
     if show_bldg:
         im = fade(im, lambda x: building(x, CX, SHELF_Y), a)
-    if i not in (11, 12):
+    if name not in ("summary", "end"):
         shelf(im)
 
-    if i == 1:      # 結論を先に: 損してる人ほど残ると、FX会社は儲かる
+    if name == "claim":      # 結論を先に: 損してる人ほど残ると、FX会社は儲かる
         im = fade(im, lambda x: loss_chart(x, 1.0), 1 - k_(u, 0, 0.25))
         pts = [p for n, p in enumerate(L_STAY) if u >= 0.2 + 0.1 * n]
         if pts:
             people(im, pts, RED)
         sticker(im, 820, 760, "儲かる", col=GREEN, angle=-8, k=(u - 0.9) / 0.35)
-    elif i == 2:    # ① スプレッドとは: 買った瞬間、この分マイナス
+    elif name == "spread":    # ① スプレッドとは: 買った瞬間、この分マイナス
         y_buy, y_sell = BAND_Y + 120, BAND_Y + 270
         im = fade(im, lambda x: spread_band(x, CX, y_buy, 640, 150, label="スプレッド"), k_(u, 0.1, 0.3))
         d = ImageDraw.Draw(im)
@@ -131,18 +147,18 @@ def scene(im, t, cuts, sc=None):
             d.text((820, y_buy - 40), "ここで買う", font=F(44), anchor="md", fill=RED)
         arrow(im, 820, y_buy + 20, 820, y_sell - 10, RED, k=k_(u, 0.9, 0.4))
         sticker(im, CX, y_sell + 130, "買った瞬間マイナス", col=RED, angle=-6, k=(u - 1.4) / 0.35)
-    elif i == 3:    # その差は会社の取り分
+    elif name == "share":    # その差は会社の取り分
         im = fade(im, lambda x: spread_band(x, CX, BAND_Y, 640, 110, label="スプレッド"), k_(u, 0, 0.3))
         if u >= 0.5:
             arrow(im, CX, BAND_Y + 130, CX, SHELF_Y - 340, INK, k=k_(u, 0.5, 0.3))
             ImageDraw.Draw(im).text((CX + 30, BAND_Y + 140), "取り分", font=F(44), anchor="la", fill=INK)
-    elif i == 4:    # ② あなたが買うと、会社は反対に売りを持つ
+    elif name == "you_buy":    # ② あなたが買うと、会社は反対に売りを持つ
         you(im, k=(u - 0.2) / 0.3)
         arrow(im, 360, 1100, 430, 960, RED, k=k_(u, 0.5, 0.5))
         if u >= 0.6:
             ImageDraw.Draw(im).text((330, 1010), "買い", font=F(46), anchor="rm", fill=RED)
         sticker(im, 700, 700, "会社は売り", col=BLUE, angle=-6, k=(u - 1.1) / 0.35)
-    elif i == 5:    # 売る人もいるので、お客さん同士でカバー
+    elif name == "cover":    # 売る人もいるので、お客さん同士でカバー
         you(im)
         im = fade(im, lambda x: sticker(x, 700, 700, "会社は売り", col=BLUE, angle=-6), 1 - k_(u, 0, 0.25))
         arrow(im, 360, 1100, 450, 960, RED)
@@ -152,11 +168,11 @@ def scene(im, t, cuts, sc=None):
             ImageDraw.Draw(im).text((780, 1216), "売る人", font=F(46), anchor="ma", fill=BLUE)
         arrow(im, 720, 1100, 630, 960, BLUE, k=k_(u, 0.5, 0.5))
         sticker(im, CX, 700, "ぶつけて±0", col=GREEN, angle=-6, k=(u - 1.2) / 0.35)
-    elif i == 6:    # 会社は値動きで損しない。スプレッドだけ入る
+    elif name == "only_spread":    # 会社は値動きで損しない。スプレッドだけ入る
         im = fade(im, lambda x: spread_band(x, CX, BAND_Y, 640, 110, label="スプレッド"), k_(u, 0, 0.3))
         arrow(im, CX, BAND_Y + 130, CX, SHELF_Y - 340, INK, k=k_(u, 0.3, 0.3))
         sticker(im, 820, 760, "スプレッドだけ", col=GREEN, angle=-8, k=(u - 0.9) / 0.35)
-    elif i == 7:    # ③ ストップを置く人は抜け、我慢する人は損したまま残る
+    elif name == "stay":    # ③ ストップを置く人は抜け、我慢する人は損したまま残る
         mv = k_(u, 0.8, 0.9)
         stay, leave = [], []
         for n, p in enumerate(L_PTS):
@@ -174,23 +190,23 @@ def scene(im, t, cuts, sc=None):
         if u >= 1.5:
             ImageDraw.Draw(im).text((455, 1130), "ストップ→抜ける", font=F(34), anchor="ma", fill=SUB)
         sticker(im, 153, 940, "我慢→残る", col=RED, angle=-8, k=(u - 1.9) / 0.35)
-    elif i == 8:    # 残るほど、会社は儲かってくる
+    elif name == "profit":    # 残るほど、会社は儲かってくる
         pts = [p for n, p in enumerate(STACK6) if n < 3 or u >= 0.2 + 0.12 * (n - 3)]
         people(im, pts, RED)
         sticker(im, 820, 760, "儲かる", col=GREEN, angle=-8, k=(u - 1.0) / 0.35)
-    elif i == 9:    # 昔はもっと広くて、何もしなくても会社は増えた
+    elif name == "old_new":    # 昔はもっと広くて、何もしなくても会社は増えた
         p = k_(u, 0.1, 0.4)
         spread_band(im, 290, 420, 380, max(2, 220 * p), label="昔" if p > 0.6 else None)
         q = k_(u, 0.9, 0.35)
         if q > 0:
             spread_band(im, 790, 495, 380, max(2, 70 * q), label=None)
             ImageDraw.Draw(im).text((790, 530), "今", font=F(54), anchor="mm", fill=INK)
-    elif i == 10:   # スプレッドは毎回払う分。だから狭い通貨で
+    elif name == "pairs":   # スプレッドは毎回払う分。だから狭い通貨で
         mini_band(im, 180, 50, BLUE, "ドル円", k=(u - 0.2) / 0.35)
         mini_band(im, 540, 60, BLUE, "ユーロドル", k=(u - 0.5) / 0.35)
         mini_band(im, 900, 240, RED, "マイナー通貨", k=(u - 0.8) / 0.35, dim=k_(u, 1.0, 0.4))
         sticker(im, 300, 770, "払う分が小さい", col=GREEN, angle=-8, k=(u - 1.2) / 0.35)
-    elif i == 11:   # まとめ(① ② は同じ大きさ)
+    elif name == "summary":   # まとめ(① ② は同じ大きさ)
         p = back((u - 0.1) / 0.35)
         if p > 0:
             d = ImageDraw.Draw(im)
@@ -202,7 +218,7 @@ def scene(im, t, cuts, sc=None):
                     d.text((160, 800), "① ストップを置く", font=F(64), anchor="lm", fill=GREEN)
                 if u >= 0.9:
                     d.text((160, 960), "② スプレッドの狭い通貨で", font=F(64), anchor="lm", fill=GREEN)
-    elif i == 12:   # 保存をすすめる画面
+    elif name == "end":   # 保存をすすめる画面
         a = k_(u, 0, 0.25)
         def end(x):
             d = ImageDraw.Draw(x)

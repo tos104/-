@@ -197,7 +197,7 @@ def frame(sc, t, cuts):
     if s.get("caption"):
         same = i > 0 and sc["shots"][i - 1].get("caption") == s["caption"]
         p = 1.0 if same else k_(t, cuts[i], 0.18)
-        im = fade(im, lambda x: caption(x, s["caption"], y=1320, final=s.get("final", False)), p)
+        im = fade(im, lambda x: caption(x, s["caption"], y=sc.get("caption_y", 1320), final=s.get("final", False)), p)
     return im
 
 

@@ -411,7 +411,7 @@ def layer_TL(b, t=None):
         while d.textlength(tx["head"], font=f) > W - 70: f = font("dela", f.size - 4)
         ctext(d, (W / 2, 175), tx["head"], f, (255, 230, 0), 9)
     d.rectangle((0, VY - 6, W, VY), fill=(255, 255, 255)); d.rectangle((0, VY + vh, W, VY + vh + 6), fill=(255, 255, 255))
-    step = tx["step"]; x = 150; y0 = 975
+    step = tx["step"]; x = 150; y0 = 1005
     d.line((x, y0, x, y0 + 3 * 178), fill=(200, 200, 200), width=10)
     d.line((x, y0, x, y0 + min(step, 3) * 178), fill=(255, 42, 42), width=10)
     for i, (a, v) in enumerate(TL_STEPS):

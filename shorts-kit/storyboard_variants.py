@@ -430,7 +430,8 @@ def layer_TL(b, t=None):
             st = Image.new("RGBA", (520, 300), (0, 0, 0, 0)); sd = ImageDraw.Draw(st)
             sd.rounded_rectangle((20, 20, 500, 280), radius=40, fill=(220, 30, 40), outline=(255, 255, 255), width=12)
             sd.text((260, 150), tx["stamp"], font=font("dela", 150), fill=(255, 255, 255), anchor="mm", stroke_width=6, stroke_fill=(120, 0, 0))
-            st = st.rotate(-10, expand=True).resize((int(st.width * 0.72 * sc), int(st.height * 0.72 * sc)))
+            st = st.rotate(10, expand=True)  # 右肩上がり
+            st = st.resize((int(st.width * 0.72 * sc), int(st.height * 0.72 * sc)))
             img.alpha_composite(st, (int(735 - st.width / 2), int(1360 - st.height / 2)))
     if tx.get("cta"):
         a, pill = tx["cta"]

@@ -56,13 +56,16 @@ def mini_band(im, cx, gap, col, label, k=1.0, dim=0.0):
     ImageDraw.Draw(im).text((cx, SHELF_Y + 30), label, font=F(54), anchor="ma", fill=c)
 
 
-def fx_spread(im, t, cuts):
+def fx_spread(im, t, cuts, sc=None):
     c = cuts                         # 各カットの開始秒
+    end = c[-1]                      # 最後のカット(保存の画面)
+    ttl = (sc or {}).get("title", "FX会社は\n何もしなくても稼げる")
+    has_pill = (sc or {}).get("pill", True)
     # 冒頭の題 → 小見出し(2 カット目の頭で入れ替え)
     a = k_(t, c[1], 0.3)
     if a < 1:
-        im = fade(im, lambda x: title(x, "FX会社は\n何もしなくても稼げる", y=190), 1 - a)
-    if a > 0 and t < c[8]:
+        im = fade(im, lambda x: title(x, ttl, y=190), 1 - a)
+    if a > 0 and t < end:
         im = fade(im, lambda x: header(x, "FX会社の稼ぎ方"), a)
     # 棚と会社(1〜6 カット)。7 カット目の頭で消える
     gone = k_(t, c[6], 0.3)
@@ -142,7 +145,7 @@ def fx_spread(im, t, cuts):
                 ImageDraw.Draw(x).text((790, 530), "今", font=F(54), anchor="mm", fill=INK)
         im = fade(im, oldnew, 1 - out)
     # 通貨 3 つ(7〜8 カット)
-    if c[6] <= t < c[8]:
+    if c[6] <= t < end:
         mini_band(im, 180, 50, BLUE, "ドル円", k=(t - c[6] - 0.2) / 0.35)
         mini_band(im, 540, 60, BLUE, "ユーロドル", k=(t - c[6] - 0.5) / 0.35)
         mini_band(im, 900, 240, RED, "マイナー通貨", k=(t - c[6] - 0.8) / 0.35, dim=k_(t, c[6] + 1.0, 0.4))
@@ -150,7 +153,7 @@ def fx_spread(im, t, cuts):
         if t >= c[6] + 1.2:
             note(im, "※幅は形だけ(数字ではない)", x=40, y=1100)
     # 案内の札+カーソル(8 カット目)
-    if c[7] <= t < c[8]:
+    if has_pill and c[7] <= t < end:
         pk = k_(t, c[7] + 0.2, 0.3)
         pill(im, "関連動画で 待てる人の入り方", y=330, k=pk)
         if t >= c[7] + 0.6:
@@ -160,8 +163,8 @@ def fx_spread(im, t, cuts):
             press = 1.0 if c[7] + 1.15 <= t < c[7] + 1.35 else 0.0
             cursor(im, x0 + (x1 - x0) * m, y0 + (y1 - y0) * m, press)
     # 最後: 保存をすすめる画面(テクニカル動画と同じ終わり方)
-    if t >= c[8]:
-        a = k_(t, c[8], 0.25)
+    if t >= end:
+        a = k_(t, end, 0.25)
         def end(x):
             d = ImageDraw.Draw(x)
             d.rectangle((0, 0, W, H), fill=(255, 255, 255))
@@ -177,7 +180,7 @@ SCENES = {"fx_spread": fx_spread}
 
 def frame(sc, t, cuts):
     im = background()
-    im = SCENES[sc["scene"]](im, t, cuts)
+    im = SCENES[sc["scene"]](im, t, cuts, sc)
     i = max(j for j, c0 in enumerate(cuts) if t >= c0)
     s = sc["shots"][i]
     if s.get("caption"):

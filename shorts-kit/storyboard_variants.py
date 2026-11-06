@@ -393,7 +393,7 @@ def layer_CHAT(b, t=None):
 
 
 # ---- TL: 時系列(design5d 案16)。上に元動画、下に縦の線で「2年前→提出→返却→結果」、今の段が光る ----
-TL_STEPS = [("2年前", "2,000円で購入"), ("提出", "PSA鑑定へ"), ("返却", "ラベルは…"), ("結果", "？")]
+TL_STEPS = [("2年前", "2,000円で購入"), ("提出", "PSA鑑定へ"), ("返却", "結果は…"), ("結果", "？")]
 
 
 def layer_TL(b, t=None):
@@ -423,6 +423,15 @@ def layer_TL(b, t=None):
         f = font("dela", size)
         while d.textlength(v, font=f) > 760: f = font("dela", f.size - 4)
         ctext(d, (x + 85, y + 40), v, f, (255, 230, 0) if i == step else ((255, 255, 255) if on else (130, 130, 130)), 7, anchor="lm")
+    if tx.get("stamp"):  # 倍率の判子(結果の右に斜めに押す)。出た瞬間に大きく、すぐ戻る
+        sk = 1.0 if pa is None or t is None else min(1.0, max(0.0, (t - pa - 0.15) / 0.3))
+        if sk > 0:
+            sc = 1 + 1.2 * (1 - sk) ** 2
+            st = Image.new("RGBA", (520, 300), (0, 0, 0, 0)); sd = ImageDraw.Draw(st)
+            sd.rounded_rectangle((20, 20, 500, 280), radius=40, fill=(220, 30, 40), outline=(255, 255, 255), width=12)
+            sd.text((260, 150), tx["stamp"], font=font("dela", 150), fill=(255, 255, 255), anchor="mm", stroke_width=6, stroke_fill=(120, 0, 0))
+            st = st.rotate(-10, expand=True).resize((int(st.width * 0.72 * sc), int(st.height * 0.72 * sc)))
+            img.alpha_composite(st, (int(735 - st.width / 2), int(1360 - st.height / 2)))
     if tx.get("cta"):
         a, pill = tx["cta"]
         pill = a.replace("の全結果は", "は") + pill  # 1行にまとめて結果の行と重ならないように

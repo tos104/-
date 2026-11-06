@@ -39,7 +39,7 @@ CX, BAND_Y = 540, 450
 L_PTS = [(80 + i * 66, 1200) for i in range(5)]
 R_PTS = [(736 + i * 66, 1200) for i in range(5)]
 L_STAY = [(120, 1200), (186, 1200), (153, 1110)]           # 残って積み上がる
-L_LEAVE = [(380, 1040), (450, 980)]                        # 去る(ストップを置く人)
+L_LEAVE = [(420, 1265), (490, 1285)]                       # 去る(ストップを置く人)。右下へ(ユーザー指定 2026-11-06)
 
 
 def mini_band(im, cx, gap, col, label, k=1.0, dim=0.0):
@@ -61,6 +61,7 @@ def fx_spread(im, t, cuts, sc=None):
     end = c[-1]                      # 最後のカット(保存の画面)
     ttl = (sc or {}).get("title", "FX会社は\n何もしなくても稼げる")
     has_pill = (sc or {}).get("pill", True)
+    hook_stay = (sc or {}).get("hook") == "stay"     # 冒頭で「残る」人を先に見せる(案1)
     # 冒頭の題 → 小見出し(2 カット目の頭で入れ替え)
     a = k_(t, c[1], 0.3)
     if a < 1:
@@ -77,11 +78,20 @@ def fx_spread(im, t, cuts, sc=None):
     if gone >= 1:
         shelf(im)
     # 値段の 2 本(1〜5 カット)。2 カット目で「？」→「スプレッド」
-    if t < c[5] + 0.3:
-        p = k_(t, c[1] + 0.1, 0.35)
-        out = k_(t, c[5], 0.3)
+    if t < c[5] + 0.3 and (not hook_stay or t >= c[1]):
+        p = 1.0 if hook_stay else k_(t, c[1] + 0.1, 0.35)
+        out = k_(t, c[5], 0.3) if not hook_stay else 1 - k_(t, c[1], 0.3) * (1 - k_(t, c[5], 0.3))
         im = fade(im, lambda x: spread_band(x, CX, BAND_Y, 640, 110, fill_k=p, q=1 - p,
                                             label="スプレッド" if p > 0.5 else None, dashed=p < 0.5), 1 - out)
+    # 冒頭(案1): 残る人の山・右下へ去る人・札「残る」を 1コマ目から見せる。2 カット目の頭で消える
+    if hook_stay and t < c[1] + 0.3:
+        def hook(x):
+            people(x, L_STAY, RED)
+            people(x, L_LEAVE, (205, 210, 218))
+            people(x, R_PTS, BLUE)
+            ImageDraw.Draw(x).text((455, 1130), "ストップ", font=F(36), anchor="ma", fill=SUB)
+            sticker(x, 153, 940, "残る", col=RED, angle=-8)
+        im = fade(im, hook, 1 - k_(t, c[1], 0.3))
     # 取り分の矢印(2 カット目)
     ar = k_(t, c[1] + 0.8, 0.3) * (1 - k_(t, c[2], 0.25))
     if ar > 0:
@@ -119,7 +129,7 @@ def fx_spread(im, t, cuts, sc=None):
                 if t < c[4]:
                     note(x, "雇用統計の前", x=40, y=1060)
             if mv > 0.5:
-                d.text((415, 1100), "ストップ", font=F(36), anchor="ma", fill=SUB)
+                d.text((455, 1130), "ストップ", font=F(36), anchor="ma", fill=SUB)
         im = fade(im, ppl, 1 - out)
     # カバー(4 カット目)
     if c[3] <= t < c[4] + 0.3:

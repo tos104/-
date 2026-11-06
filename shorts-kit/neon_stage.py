@@ -37,7 +37,7 @@ def back(k):
     return 1 + (c + 1) * (k - 1) ** 3 + c * (k - 1) ** 2
 
 
-def background():
+def _background():
     im = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(im)
     hz, vx = 1380, W / 2            # 床の格子(遠近)。上ほど薄く
@@ -52,14 +52,30 @@ def background():
 
 
 def glow(im, draw_fn, color, width=18, alpha=0.35):
-    """draw_fn(d, col) で描いたものを、同じ色でにじませてから本体を重ねる(ネオン)。"""
+    """draw_fn(d, col) で描いたものを、同じ色でにじませてから本体を重ねる(ネオン)。
+    にじみは描いた範囲だけ切り出してぼかす(全画面をぼかすと遅いため)。"""
     layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
     draw_fn(ImageDraw.Draw(layer), color + (255,))
-    halo = layer.filter(ImageFilter.GaussianBlur(width))
+    bb = layer.getbbox()
+    if not bb:
+        return
+    m = width * 3
+    box = (max(0, bb[0] - m), max(0, bb[1] - m), min(im.width, bb[2] + m), min(im.height, bb[3] + m))
+    part = layer.crop(box)
+    halo = part.filter(ImageFilter.GaussianBlur(width))
     a = halo.getchannel("A").point(lambda v: int(v * alpha))
     halo.putalpha(a)
-    im.paste(halo, (0, 0), halo)
-    im.paste(layer, (0, 0), layer)
+    im.paste(halo, box[:2], halo)
+    im.paste(part, box[:2], part)
+
+
+_BG = []
+
+
+def background():
+    if not _BG:
+        _BG.append(_background())
+    return _BG[0].copy()
 
 
 def shelf(im, y=SHELF_Y, k=1.0):

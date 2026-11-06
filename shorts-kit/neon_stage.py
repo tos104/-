@@ -82,10 +82,26 @@ def shelf(im, y=SHELF_Y, k=1.0):
     glow(im, lambda d, c: d.line((40, y, 40 + (W - 80) * ease(k), y), fill=c, width=4), (150, 175, 210), 10, 0.5)
 
 
-def title(im, text, y=200, size=72, alpha=1.0):
+def title(im, text, y=200, size=72, alpha=1.0, hl=RED):
+    """冒頭の題。{ } で囲んだ所は強調色(赤)。行は中央揃え。"""
     d = ImageDraw.Draw(im)
+    f = F(size)
     for i, line in enumerate(text.split("\n")):
-        d.text((W / 2, y + i * size * 1.25), line, font=F(size), anchor="ma", fill=INK)
+        parts, cur, on = [], "", False
+        for ch in line:
+            if ch in "{}":
+                if cur:
+                    parts.append((cur, on))
+                cur, on = "", ch == "{"
+            else:
+                cur += ch
+        if cur:
+            parts.append((cur, on))
+        w = sum(f.getlength(p) for p, _ in parts)
+        x = W / 2 - w / 2
+        for p, on in parts:
+            d.text((x, y + i * size * 1.25), p, font=f, anchor="la", fill=hl if on else INK)
+            x += f.getlength(p)
 
 
 def header(im, text, y=230):

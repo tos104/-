@@ -230,8 +230,17 @@ def main():
         mix, se = track
         wav = a.out + ".sfx.wav"
         se.write_wav(wav, mix)
-        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", video, "-i", wav, "-c:v", "copy", "-c:a", "aac",
-                        "-b:a", "192k", "-ar", "48000", "-shortest", "-movflags", "+faststart", a.out], check=True)
+        af = []
+        if "lufs" in sc.get("loudness", {}):   # 2回で測って合わせる(chart_short.py と同じ。YouTube の目安 -14 LUFS)
+            L = sc["loudness"]
+            base = f"loudnorm=I={L['lufs']}:TP={L.get('peak_dbtp', -1.0)}:LRA=11"
+            log = subprocess.run(["ffmpeg", "-hide_banner", "-i", wav, "-af", base + ":print_format=json", "-f", "null", "-"],
+                                 capture_output=True, text=True).stderr
+            m = json.loads(log[log.rindex("{"):log.rindex("}") + 1])
+            af = ["-af", base + f":measured_I={m['input_i']}:measured_TP={m['input_tp']}:measured_LRA={m['input_lra']}"
+                  f":measured_thresh={m['input_thresh']}:offset={m['target_offset']}:linear=true"]
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", video, "-i", wav, "-c:v", "copy"] + af +
+                       ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest", "-movflags", "+faststart", a.out], check=True)
         os.remove(video)
         os.remove(wav)
     print(a.out)

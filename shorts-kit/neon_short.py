@@ -65,7 +65,7 @@ def fx_spread(im, t, cuts, sc=None):
     # 冒頭の題 → 小見出し(2 カット目の頭で入れ替え)
     a = k_(t, c[1], 0.3)
     if a < 1:
-        im = fade(im, lambda x: title(x, ttl, y=190), 1 - a)
+        im = fade(im, lambda x: title(x, ttl, y=(sc or {}).get("title_y", 190), size=(sc or {}).get("title_size", 72)), 1 - a)
     if a > 0 and t < end:
         im = fade(im, lambda x: header(x, "FX会社の稼ぎ方"), a)
     # 棚と会社(1〜6 カット)。7 カット目の頭で消える

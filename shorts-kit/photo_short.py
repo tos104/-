@@ -640,7 +640,8 @@ def fx_stamp(c, t, sh):
             d.text((260 - (x0 + x1) / 2, y - y0), ln, font=f, fill=ROSE)
             y += y1 - y0 + 18
         st = st.rotate(12, Image.BICUBIC)  # 反時計回り = 右肩上がり
-        put(c, st, 540, 640, alpha=min(1, k * 3), scale=1.7 - 0.7 * out_back(k, 1.0))
+        ease = out_back(k, 1.0) if sh.get("bounce", True) else out_cubic(k)  # bounce: false で行き過ぎて戻る動きをなくす
+        put(c, st, 540, 640, alpha=min(1, k * 3), scale=(1.7 - 0.7 * ease) if sh.get("bounce", True) else (1.15 - 0.15 * ease))
     a = out_cubic(prog(t, 0.6, 0.3))
     if a > 0:  # 文字の下に暗い板(写真がにぎやかでも読めるように)
         top, bot = 950, 1010 + (len(sh["text"]) - 1) * 110 + 70

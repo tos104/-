@@ -48,7 +48,6 @@
    "speed": 12.0,
    "dur": 2.3,
    "fx": "route",
-   "trans": "punch",
    "p": [
     0.3,
     0.5
@@ -68,7 +67,6 @@
    "speed": 1.5,
    "dur": 2.0,
    "fx": "route",
-   "trans": "punch",
    "p": [
     0.5,
     0.6
@@ -86,7 +84,6 @@
    "speed": 1.5,
    "dur": 2.2,
    "fx": "route",
-   "trans": "punch",
    "p": [
     0.6,
     0.7
@@ -104,7 +101,6 @@
    "speed": 1.0,
    "dur": 1.8,
    "fx": "route",
-   "trans": "punch",
    "p": [
     0.7,
     0.78
@@ -141,7 +137,6 @@
    "speed": 2.0,
    "dur": 1.6,
    "fx": "route",
-   "trans": "punch",
    "p": [
     0.78,
     0.9
@@ -178,7 +173,6 @@
    "speed": 2.5,
    "dur": 2.0,
    "fx": "route",
-   "trans": "fade",
    "p": [
     0.95,
     1.0
@@ -206,7 +200,8 @@
     "行き方は、この動画を送ればOK"
    ],
    "note": "CTA: 予約方法と『この動画を送る』行動(シェアを狙う。相手は限定しない)",
-   "last_hot": true
+   "last_hot": true,
+   "bounce": false
   }
  ],
  "sharp": 1.1

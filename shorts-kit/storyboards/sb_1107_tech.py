@@ -99,10 +99,12 @@ def steps_diagram(im, title, pts, extras):
 
 
 def end_card(im):
+    """① と同じ保存の画面(白地・中央・青 64px+免責 52px)。"""
     d = ImageDraw.Draw(im)
-    d.text((540, PANEL_Y + 120), "保存して、次のトレードで試す", font=F(58), anchor="mm", fill=BLUE)
+    d.rectangle((0, 0, W, H), fill=(255, 255, 255))
+    d.text((540, 760), "保存して、次のトレードで試す", font=F(64), anchor="mm", fill=BLUE)
     for n, l in enumerate(["教育目的であり、金融・投資助言では", "ありません。取引判断はご自身で", "行ってください。"]):
-        d.text((540, PANEL_Y + 330 + n * 74), l, font=F(52), anchor="mm", fill=INK)
+        d.text((540, 930 + n * 84), l, font=F(52), anchor="mm", fill=INK)
 
 
 def C(t, cx, cy, w, tt, marks=(), size=80):

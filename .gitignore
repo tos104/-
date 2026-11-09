@@ -1,3 +1,4 @@
 output/
 __pycache__/
 *.pyc
+shorts-kit/handoff/*.zip

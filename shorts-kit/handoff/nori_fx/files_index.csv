@@ -1,0 +1,141 @@
+zip,パス,バイト,説明
+nori_fx_A_*.zip,fx_spread_learn.py,11686,制作ツール
+nori_fx_A_*.zip,photo_short.py,48757,制作ツール
+nori_fx_A_*.zip,make_short.py,4373,制作ツール
+nori_fx_A_*.zip,gates.py,2737,制作ツール
+nori_fx_A_*.zip,neon_stage.py,8686,制作ツール
+nori_fx_A_*.zip,explainer.py,5493,制作ツール
+nori_fx_A_*.zip,plan_short.py,7585,制作ツール
+nori_fx_A_*.zip,README.md,1801,引き継ぎ書(目的・現状・ルール・トーン・禁止事項)
+nori_fx_A_*.zip,storyboard.py,3198,制作ツール
+nori_fx_A_*.zip,transcribe.py,2521,制作ツール
+nori_fx_A_*.zip,CLAUDE.md,2447,リポジトリの作業ルール(制作契約の写し・セッション間共有)
+nori_fx_A_*.zip,panel_short.py,29943,制作ツール
+nori_fx_A_*.zip,measure_ref.py,4805,制作ツール
+nori_fx_A_*.zip,yti.py,2048,制作ツール
+nori_fx_A_*.zip,critic.py,4062,制作ツール
+nori_fx_A_*.zip,narr_short.py,5667,制作ツール
+nori_fx_A_*.zip,storyboard_variants.py,50528,制作ツール
+nori_fx_A_*.zip,theme_followup.py,3856,制作ツール
+nori_fx_A_*.zip,tracker.py,7099,制作ツール
+nori_fx_A_*.zip,competitor_patterns.py,5847,制作ツール
+nori_fx_A_*.zip,rich_short.py,26335,制作ツール
+nori_fx_A_*.zip,cliplist.py,4229,制作ツール
+nori_fx_A_*.zip,se.py,13419,制作ツール
+nori_fx_A_*.zip,PLAYBOOK.md,86336,知見・型・スタイルガイド・実験ログ(全案件共通)
+nori_fx_A_*.zip,fx_diagrams.py,7634,制作ツール
+nori_fx_A_*.zip,CONTRACT.md,2210,制作契約
+nori_fx_A_*.zip,neon_short.py,12598,制作ツール
+nori_fx_A_*.zip,chart_short.py,66116,制作ツール
+nori_fx_A_*.zip,nori_fx_handoff_docs/routine.md,3996,定期作業と制作手順
+nori_fx_A_*.zip,nori_fx_handoff_docs/own_posts_history.csv,2317,ユーザー制作2本の数値の推移
+nori_fx_A_*.zip,nori_fx_handoff_docs/nori_subs_history.csv,352,nori 登録者の推移
+nori_fx_A_*.zip,nori_fx_handoff_docs/tasks.md,3029,未完了タスク
+nori_fx_A_*.zip,nori_fx_handoff_docs/README.md,10464,引き継ぎ書(目的・現状・ルール・トーン・禁止事項)
+nori_fx_A_*.zip,nori_fx_handoff_docs/deliverables.csv,1827,成果物の一覧と実績
+nori_fx_A_*.zip,nori_fx_handoff_docs/accounts.md,2121,アカウント一覧
+nori_fx_A_*.zip,nori_fx_handoff_docs/nori_shorts_latest.csv,25772,nori のショート最新15本の公開数値(11-09)
+nori_fx_A_*.zip,research/shorts_norifx2058_2026-11-01.json,22042,調査データ
+nori_fx_A_*.zip,research/yomanai_fx_notes.md,6664,調査データ
+nori_fx_A_*.zip,research/fx_shorts_search_2026-11-07.json,200036,調査データ
+nori_fx_A_*.zip,reviews/fx_usdjpy_box_v3_vivid.md,2041,検品記録
+nori_fx_A_*.zip,reviews/fx_usdjpy_box_v5_tate.md,1556,検品記録
+nori_fx_A_*.zip,reviews/fx_usdjpy_box_v2.md,2603,検品記録
+nori_fx_A_*.zip,reviews/fx_usdjpy_box_v8.md,2512,検品記録
+nori_fx_A_*.zip,reviews/fx_usdjpy_box_v5.md,1679,検品記録
+nori_fx_A_*.zip,reviews/fx_usdjpy_box_v7.md,1082,検品記録
+nori_fx_A_*.zip,reviews/fx_usdjpy_box_v9.md,953,検品記録
+nori_fx_A_*.zip,reviews/fx_usdjpy_box_v6.md,1416,検品記録
+nori_fx_A_*.zip,gates/fx_usdjpy_1022.json,322,関門の承認状態
+nori_fx_A_*.zip,gates/fx_usdjpy_box_v6.json,285,関門の承認状態
+nori_fx_A_*.zip,gates/fx_usdjpy_box.json,329,関門の承認状態
+nori_fx_A_*.zip,gates/fx_usdjpy_box_v5.json,301,関門の承認状態
+nori_fx_A_*.zip,gates/fx_usdjpy_box_v3.json,271,関門の承認状態
+nori_fx_A_*.zip,gates/fx_usdjpy_box_v5_tate.json,244,関門の承認状態
+nori_fx_A_*.zip,scripts/fx_spread_1107_v7.json,3072,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v5.json,4997,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_spread_1107_v2.json,2013,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v7.json,6373,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_box_v6.json,5181,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_spread_1107_v8.json,4361,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v1.json,3872,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_box.json,3307,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_box_v9.json,6315,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_spread_1107_v3.json,1864,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v12.json,24971,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_box_v5.json,4915,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_box_v8.json,5604,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v10.json,6830,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_box_v3.json,3702,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_spread_1107_v5.json,2244,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_box_v5_tate.json,4929,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v11.json,12018,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_spread_1107_v6.json,3054,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v4.json,4475,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_box_v4.json,3885,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_box_v7.json,5283,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v13.json,25032,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v2.json,4269,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v6.json,5698,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_spread_1107_v1.json,3315,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_tri_1107_v1.json,12876,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v9.json,6666,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v14.json,25117,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v3.json,4655,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_box_v3_vivid.json,3767,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_spread_1107_v4.json,2161,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v15.json,25094,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,scripts/fx_usdjpy_1022_v8.json,6630,動画の台本(JSON・版ごと)
+nori_fx_A_*.zip,data/snapshots.jsonl,789134,公開数値のスナップショット(全案件)
+nori_fx_A_*.zip,copy/fx_usdjpy_1022_v13.md,12898,投稿文セット・提案文
+nori_fx_A_*.zip,copy/TEMPLATE.md,4033,投稿文セット・提案文
+nori_fx_A_*.zip,copy/proposal_nori_1107.md,3087,投稿文セット・提案文
+nori_fx_A_*.zip,copy/fx_spread_1107_v8.md,5512,投稿文セット・提案文
+nori_fx_A_*.zip,copy/fx_usdjpy_box_v8.md,11199,投稿文セット・提案文
+nori_fx_A_*.zip,copy/fx_usdjpy_box_v3.md,1439,投稿文セット・提案文
+nori_fx_A_*.zip,copy/fx_usdjpy_box_v7.md,2837,投稿文セット・提案文
+nori_fx_A_*.zip,copy/fx_usdjpy_box.md,1438,投稿文セット・提案文
+nori_fx_A_*.zip,briefs/fx_usdjpy_1022.md,11617,案件の制作記録(版ごとのユーザー指示)
+nori_fx_A_*.zip,briefs/fx_usdjpy_box_v5_tate.md,508,案件の制作記録(版ごとのユーザー指示)
+nori_fx_A_*.zip,briefs/fx_tri_1107.md,894,案件の制作記録(版ごとのユーザー指示)
+nori_fx_A_*.zip,briefs/fx_usdjpy_box_v4.md,1286,案件の制作記録(版ごとのユーザー指示)
+nori_fx_A_*.zip,briefs/fx_usdjpy_box_v3.md,3477,案件の制作記録(版ごとのユーザー指示)
+nori_fx_A_*.zip,briefs/fx_spread_1107.md,7649,案件の制作記録(版ごとのユーザー指示)
+nori_fx_A_*.zip,briefs/fx_usdjpy_box_v5.md,2491,案件の制作記録(版ごとのユーザー指示)
+nori_fx_A_*.zip,briefs/fx_usdjpy_box_v7.md,1579,案件の制作記録(版ごとのユーザー指示)
+nori_fx_A_*.zip,briefs/fx_usdjpy_box_v9.md,1753,案件の制作記録(版ごとのユーザー指示)
+nori_fx_A_*.zip,briefs/fx_usdjpy_box_v6.md,3368,案件の制作記録(版ごとのユーザー指示)
+nori_fx_A_*.zip,briefs/fx_usdjpy_box.md,3979,案件の制作記録(版ごとのユーザー指示)
+nori_fx_A_*.zip,storyboards/sb_1107_all.py,14490,絵コンテを描くスクリプト
+nori_fx_A_*.zip,storyboards/sb_1107_tech.py,11944,絵コンテを描くスクリプト
+nori_fx_B_*.zip,videos/fx_spread_1107_v8.mp4,2884456,完成・仮の動画
+nori_fx_B_*.zip,videos/fx_tri_1107_v1.mp4,2694524,完成・仮の動画
+nori_fx_B_*.zip,videos/fx_usdjpy_box_v9_bgm.mp4,7195778,完成・仮の動画
+nori_fx_B_*.zip,videos/fx_usdjpy_1022_v15_sfx.mp4,8985667,完成・仮の動画
+nori_fx_B_*.zip,images/storyboard_2_triangle.png,494725,コンタクトシート・提案画像・絵コンテ
+nori_fx_B_*.zip,images/fx_tri_1107_v1_sheet.png,345370,コンタクトシート・提案画像・絵コンテ
+nori_fx_B_*.zip,images/proposal_nori_1107_1.png,190291,コンタクトシート・提案画像・絵コンテ
+nori_fx_B_*.zip,images/storyboard_3_4_5.png,781249,コンタクトシート・提案画像・絵コンテ
+nori_fx_B_*.zip,images/storyboard_1_spread.png,538079,コンタクトシート・提案画像・絵コンテ
+nori_fx_B_*.zip,images/fx_spread_1107_v8_sheet.png,352582,コンタクトシート・提案画像・絵コンテ
+nori_fx_B_*.zip,images/proposal_nori_1107_2.png,258229,コンタクトシート・提案画像・絵コンテ
+nori_fx_C_*.zip,hq1022/p1.png,376713,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p10.png,389267,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p3.png,412013,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/q1.png,370450,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/q0.png,352665,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p5.png,411807,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p9.png,406111,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p2.png,380790,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p7.png,406805,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p8.png,406828,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p12.png,370450,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p0.png,376713,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p4.png,412465,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p6.png,408827,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p13.png,370665,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/q2.png,352658,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,hq1022/p11.png,389646,10/22 ドル円15分足の高画質スクリーンショット(fx_usdjpy_1022 の素材)
+nori_fx_C_*.zip,src_1107/src.mp4,23371395,のりラジオ(2026-11 第1週)の元動画と文字起こし
+nori_fx_C_*.zip,src_1107/src.srt,23374,のりラジオ(2026-11 第1週)の元動画と文字起こし
+nori_fx_A_*.zip,fonts/・kinetic/,(フォルダ),フォント(しっぽり明朝ほか)と別案件の道具。ツールが参照する

@@ -1,0 +1,7 @@
+成果物,種類,最終版,状態,投稿,動画ID,再生(11-09),高評価(11-09),台本,ブリーフ,投稿文,パッケージ内の動画
+レンジブレイク(10/19〜20 ドル円15分足・ボックス→リボン抜け→押し目)fx_usdjpy_box,信頼動画(手法),v9(声 VOICEVOX+BGM),完成・投稿済み,2026-10-28,oX4YMF9bud4,3115,98,scripts/fx_usdjpy_box_v9.json,briefs/fx_usdjpy_box.md,copy/fx_usdjpy_box_v8.md(確定版あり),videos/fx_usdjpy_box_v9_bgm.mp4
+ダブルトップに見えて三尊(10/22 ドル円15分足)fx_usdjpy_1022,信頼動画(手法),v15(効果音・声なし),完成・投稿済み(投稿は v13〜v15 相当。ユーザーが速度を変えた可能性あり),2026-11-01,nfCEP_wvdwM,3696,71,scripts/fx_usdjpy_1022_v15.json,briefs/fx_usdjpy_1022.md,copy/fx_usdjpy_1022_v13.md(最終版あり),videos/fx_usdjpy_1022_v15_sfx.mp4
+含み損、我慢してない？(FX会社の稼ぎ方・のりラジオ 1107)fx_spread_1107,入り口動画(図解),v8(声 VOICEVOX+効果音・-14.5 LUFS),完成・未投稿,,,,,scripts/fx_spread_1107_v8.json,briefs/fx_spread_1107.md,copy/fx_spread_1107_v8.md(下書き),videos/fx_spread_1107_v8.mp4
+トライアングル→レジサポ転換→押し目買い(のりラジオ 1107 13:20〜14:40)fx_tri_1107,信頼動画(手法),v1(仮・チャートは低画質),仮・未投稿,,,,,scripts/fx_tri_1107_v1.json,briefs/fx_tri_1107.md,なし,videos/fx_tri_1107_v1.mp4
+nori さんへの提案画像(入り口動画と信頼動画・今回の提案),提案資料,2枚,完成・送付は不明,,,,,,,copy/proposal_nori_1107.md(文章版),images/proposal_nori_1107_1.png ・ images/proposal_nori_1107_2.png
+1107 の5案の絵コンテ,絵コンテ,①v9 ②〜⑤ 1022型,提示済み,,,,,storyboards/sb_1107_tech.py,briefs/fx_spread_1107.md,,images/storyboard_*.png

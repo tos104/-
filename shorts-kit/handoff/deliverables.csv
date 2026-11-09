@@ -1,0 +1,10 @@
+﻿成果物,ファイル,状態,備考
+型テスト① 文字と演出型,06_videos/tangatable_bonenkai_v4.mp4,10/30 投稿済み,音なし。画面に旧情報(着席40・立食80・90分・DM・メール・電話)
+型テスト② 店内案内型,06_videos/tangatable_tour_v6.mp4,完成,BGM・効果音あり、バウンスあり。投稿したかは未確認
+型テスト③ 道案内型,06_videos/tangatable_route_v7.mp4,完成,音なし・バウンスなし(11/06 最新指示)
+投稿文,04_copy/*.md,完成,店内案内型・道案内型は各5案＋A改(推奨)。bonenkaiは古い情報を含む
+11/8カルーセル3枚,07_images/1108_carousel_*.jpg,要作り直し,2枚目に旧情報
+告知ストーリーズ3枚,07_images/story_*.jpg,要作り直し,幹事無料・メール・40/80の旧情報
+ハイライト表紙5枚,07_images/hl_*.jpg,完成,¥/宴/道/宿/市。文字中央そろえ済み
+投稿カレンダー,02_data/posting_calendar.html / schedule_*.csv,11/06 更新,公開ページ https://claude.ai/artifact/TWzMVYiNvxAKrrcbMBYVvy
+絵コンテ,07_images/storyboard_*.png,—,台本から photo_short.py --board で再生成できる

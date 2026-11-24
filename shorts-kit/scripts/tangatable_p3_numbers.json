@@ -1,0 +1,73 @@
+{
+ "assets": "../../output/tangatable/assets",
+ "shots": [
+  {
+   "video": "2026-05-24_01.mp4",
+   "start": 0,
+   "speed": 1.5,
+   "dur": 2.4,
+   "fx": "lines",
+   "instant": true,
+   "shade": 220,
+   "shade_h": 1000,
+   "text": [
+    "{旦過市場}のそばの宴会場を",
+    "3つの数字で"
+   ],
+   "note": "HOOK: 今の旦過市場(11/24 いちばん館1階オープン)＋数字で見せると宣言"
+  },
+  {
+   "img": "2025-12-17_01.jpg",
+   "dur": 2.4,
+   "cam": "push",
+   "fx": "bignum",
+   "label": "立食",
+   "num": "100",
+   "unit": "名まで",
+   "sub": "着席なら50名",
+   "note": "数字1: 人数"
+  },
+  {
+   "img": "2026-06-03_01.jpg",
+   "dur": 2.4,
+   "cam": "push",
+   "fx": "bignum",
+   "label": "税込",
+   "num": "4,400",
+   "unit": "円〜",
+   "sub": "料理4品＋飲み放題",
+   "size": 260,
+   "note": "数字2: 予算"
+  },
+  {
+   "img": "2026-01-09_01.jpg",
+   "dur": 2.4,
+   "layout": "band",
+   "cam": "push",
+   "fx": "bignum",
+   "label": "コースの締切",
+   "num": "3",
+   "unit": "日前",
+   "sub": "貸切は7日前まで",
+   "note": "数字3: 締切で今動く理由を作る"
+  },
+  {
+   "img": "2026-04-19_01.jpg",
+   "dur": 3.6,
+   "layout": "band",
+   "cam": "push",
+   "fx": "stamp",
+   "trans": "fade",
+   "bounce": false,
+   "stamp": [
+    "予約",
+    "受付中"
+   ],
+   "text": [
+    "ご予約・ご相談はDM・お電話で",
+    "コースは3日前・貸切は7日前まで"
+   ],
+   "note": "CTA: 予約方法と締切(判子は右肩上がり・バウンスなし)"
+  }
+ ]
+}

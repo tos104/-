@@ -2,3 +2,4 @@ output/
 __pycache__/
 *.pyc
 shorts-kit/handoff/*.zip
+shorts-kit/source/

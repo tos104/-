@@ -13,13 +13,14 @@
 | transcript.txt | 日本語字幕の本文（時刻なし）。内容把握はこれを読む |
 | subtitles.srt | 日本語字幕（時刻つき） |
 | frames/*.jpg.b64 | 静止画5枚（454s / 909s / 1364s / 1818s / 2273s）。base64形式 |
-| thumbnail.jpg.b64 | サムネイル。base64形式 |
+| thumbnail.jpg.b64.part00〜02 | サムネイル。base64形式（サイズの都合で3分割） |
 
 画像の戻し方：
 
 ```
 cd shorts-kit/research_dl/55BdM7xRhjo
-for f in frames/*.b64 thumbnail.jpg.b64; do base64 -d "$f" > "${f%.b64}"; done
+for f in frames/*.b64; do base64 -d "$f" > "${f%.b64}"; done
+cat thumbnail.jpg.b64.part* | base64 -d > thumbnail.jpg
 ```
 
 （git へはテキストで入れる必要があったため base64 形式。復号後のバイト列が原本と一致することは SHA-256 で確認済み）

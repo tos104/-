@@ -39,3 +39,15 @@ BRIEF → SYSTEM → FILM → REVIEW → BETTER SYSTEM
 - 知見・方針・数値は `shorts-kit/PLAYBOOK.md` に書き、**既定のブランチ `claude/shorts-kit` に push する**。別ブランチだけに書くと、ほかのセッションから見えない(2026-11-02 に実際に起きた)
 - 作業の最初に `git fetch origin claude/shorts-kit && git merge origin/claude/shorts-kit` で最新の PLAYBOOK を取り込む。別ブランチで作業するときも同じ
 - ユーザーに「〜のナレッジある？」と聞かれたら、まず `grep -n` で PLAYBOOK.md を探してから答える
+
+## YouTubeリンクの取得(2026-11-25 追加)
+- YouTubeのリンク(URL)を受け取ったら、動画なしで進める前に、まず `shorts-kit/tools/yt_fetch.py` で取得を試すこと
+  - 使い方: `python3 shorts-kit/tools/yt_fetch.py "<URL>"`(`--video` で動画本体も残す。詳細は `shorts-kit/tools/YT_FETCH.md`)
+  - そろうもの: `shorts-kit/research_dl/<動画ID>/` に meta.txt / transcript.txt(字幕の本文) / subtitles.srt / thumbnail.jpg / frames/(静止画)
+  - 「見る」= transcript.txt を読み、frames/ の静止画を確認すること
+  - 前提: yt-dlp と ffmpeg。yt-dlp が無ければ `pip install -U yt-dlp` してから再試行する
+- この環境(クラウド)のネットワークからだと、YouTubeのボット判定で弾かれて取得できない場合がある(スクリプトが終了コード3で「取得不可」と表示する)。その時は:
+  1. `shorts-kit/research_dl/<動画ID>/` に取得済み素材が既に入っていないか確認する
+  2. 無ければ、ユーザーに「Muse(VM)側で取得して素材をこのリポジトリへ入れてもらう」よう伝える(Muse側には同じ道具があり、取得できた実績がある)
+  3. 取得できない事実と理由をごまかさず正直に報告する。動画なしで勝手に進めない
+- メンバー限定・非公開・年齢制限の動画はログインが必要で取得できない。その場合も「取得不可」と報告する
